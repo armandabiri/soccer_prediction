@@ -19,10 +19,12 @@ Every source implements the `DataSource` protocol (`fetch_team_history`, `fetch_
 - No auth. Bulk historical CSVs with columns `HC`/`AC` (corners), `HY`/`AY`/`HR`/`AR` (cards), `HTHG`/`HTAG` (half-time), `FTHG`/`FTAG` (full-time).
 - **Club leagues only** (no internationals). Use it to fit corner/card rate priors. Terms: "All Rights Reserved" betting portal; personal use of downloaded files.
 
-## openfootball / martj42 (`worldcup_open`)
+## openfootball (`worldcup_open`, `worldcup_2026`)
 
-- No auth, **public domain (CC0)**. openfootball `world-cup.json` gives fixtures and half-time scores (1930–2026); martj42 gives international results (scores only).
-- Best free backbone for the World Cup fixture list and international goal/half-time history.
+- No auth, **public domain (CC0)**. openfootball `worldcup.json` gives fixtures, full-time and half-time scores (`score.ft` / `score.ht`), and goalscorers.
+- **Real, current World Cup 2026 results** live at `https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json` (constant `soccer_prediction.datasources.worldcup_open.WC2026_URL`).
+- The registered `worldcup_2026` source fetches that file directly, so `forecast_fixture(home, away, source="worldcup_2026")` predicts from actual tournament results. `worldcup_open` reads any openfootball file from a URL or local path.
+- Provides **goals and half-time scores only** — no corners or cards. Score, 1X2, BTTS, over/under, and per-half markets use real data; corner/card markets fall back to model priors. Use `api_football` (free key) or `statsbomb` for real corners/cards.
 
 ## Choosing a source
 

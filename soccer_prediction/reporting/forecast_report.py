@@ -4,18 +4,72 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
+from datetime import UTC, datetime
 
 from soccer_prediction.models import MatchForecast
 
 __all__ = ["render_json", "render_markdown", "render_text", "example_usage", "main"]
 
 
-def render_text(forecast: MatchForecast) -> str:
+def _stamp(generated_at: datetime | None) -> str:
+    return (generated_at or datetime.now(UTC)).strftime("%Y-%m-%d_%H-%M-%S")
+
+
+def _history_summary(forecast: MatchForecast) -> str:
+    if not forecast.history:
+        return "Historical data used: none (model priors)"
+    counts: dict[str, int] = {}
+    for record in forecast.history:
+        counts[record.team] = counts.get(record.team, 0) + 1
+    detail = ", ".join(f"{team} {count}" for team, count in sorted(counts.items()))
+    return f"Historical data used: {len(forecast.history)} matches ({detail})"
+
+
+def _history_table_md(forecast: MatchForecast) -> list[str]:
+    if not forecast.history:
+        return ["### Historical data used", "", "_No historical data was available; model priors were used._"]
+    rows = [
+        "### Historical data used",
+        "",
+        "| Team | Date | Opponent | H/A | Score | HT | Corners | Y/R |",
+        "| --- | --- | --- | :-: | :-: | :-: | :-: | :-: |",
+    ]
+    for record in sorted(forecast.history, key=lambda item: (item.team, item.date)):
+        venue = "H" if record.is_home else "A"
+        rows.append(
+            f"| {record.team} | {record.date.isoformat()} | {record.opponent} | {venue} "
+            f"| {record.goals_for}-{record.goals_against} | {record.ht_goals_for}-{record.ht_goals_against} "
+            f"| {record.corners_for}-{record.corners_against} | {record.yellows}/{record.reds} |"
+        )
+    return rows
+
+
+def _scorers_table_md(forecast: MatchForecast) -> list[str]:
+    scorers = forecast.scorers
+    if scorers is None or not scorers.players:
+        return ["### Goalscorers & assists", "", "_No squad data available for player markets._"]
+    rows = [
+        "### Goalscorers & assists",
+        "",
+        "| Player | Team | Pos | Anytime | Score/assist | First |",
+        "| --- | --- | :-: | :-: | :-: | :-: |",
+    ]
+    for player in scorers.players[:12]:
+        rows.append(
+            f"| {player.player} | {player.team} | {player.position} | {player.anytime_scorer:.0%} "
+            f"| {player.to_score_or_assist:.0%} | {player.first_scorer:.0%} |"
+        )
+    return rows
+
+
+def render_text(forecast: MatchForecast, *, generated_at: datetime | None = None) -> str:
     """Render a forecast as readable text."""
     fixture = forecast.fixture
+    half = forecast.per_half.half_time_result
     lines = [
         f"{fixture.home_team} vs {fixture.away_team}",
         f"Model: {forecast.model_name}",
+        f"Generated: {_stamp(generated_at)}",
         f"1X2: {forecast.result.selection} {forecast.result.probability:.1%}",
         f"BTTS yes: {forecast.btts.probability:.1%}",
         f"Over 2.5: {forecast.over_under.probability:.1%}",
@@ -23,19 +77,24 @@ def render_text(forecast: MatchForecast) -> str:
         f" = {forecast.corners.total_expected:.2f}",
         f"Minimum corners: {forecast.corners.home_minimum}-{forecast.corners.away_minimum}",
         f"Cards: yellows {forecast.cards.yellows_expected:.2f}, reds {forecast.cards.reds_expected:.2f}",
-        f"Half-time: {forecast.per_half.half_time_result.selection if forecast.per_half.half_time_result else 'n/a'}",
+        f"Half-time: {half.selection if half else 'n/a'}",
+        _history_summary(forecast),
     ]
+    if forecast.scorers and forecast.scorers.players:
+        top = forecast.scorers.players[:3]
+        names = ", ".join(f"{player.player} {player.anytime_scorer:.0%}" for player in top)
+        lines.append(f"Top scorers (anytime): {names}")
     if forecast.generated_notes:
         lines.append("Notes: " + "; ".join(forecast.generated_notes))
     return "\n".join(lines)
 
 
 def render_json(forecast: MatchForecast) -> str:
-    """Render a forecast as JSON."""
+    """Render a forecast as JSON (includes the historical data used)."""
     return json.dumps(asdict(forecast), indent=2, sort_keys=True, default=str)
 
 
-def render_markdown(forecast: MatchForecast) -> str:
+def render_markdown(forecast: MatchForecast, *, generated_at: datetime | None = None) -> str:
     """Render a forecast as a multi-section Markdown report."""
     fixture = forecast.fixture
     home, away = fixture.home_team, fixture.away_team
@@ -49,7 +108,7 @@ def render_markdown(forecast: MatchForecast) -> str:
     corner_lines = " ".join(f"O{line:g} {prob:.0%};" for line, prob in sorted(corners.total_over_lines.items()))
     lines = [
         f"## {home} vs {away}",
-        f"*Model: {forecast.model_name}*",
+        f"*Model: {forecast.model_name} &middot; Generated: {_stamp(generated_at)}*",
         "",
         "### Match result (1X2)",
         "| Outcome | Probability |",
@@ -74,6 +133,10 @@ def render_markdown(forecast: MatchForecast) -> str:
         f"- 1st-half expected goals: {first_home:.2f} - {first_away:.2f}",
         f"- 2nd-half expected goals: {second_home:.2f} - {second_away:.2f}",
         f"- Likeliest half-time result: {half_result}",
+        "",
+        *_scorers_table_md(forecast),
+        "",
+        *_history_table_md(forecast),
     ]
     return "\n".join(lines)
 

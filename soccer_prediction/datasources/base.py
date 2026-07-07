@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
-from soccer_prediction.models import Fixture, TeamMatchStats
+from soccer_prediction.models import Fixture, PlayerStats, TeamMatchStats
 
 __all__ = [
     "DataSource",
     "DataSourceFactory",
+    "PlayerSource",
     "get_source",
     "list_sources",
     "register_source",
@@ -24,6 +25,14 @@ class DataSource(Protocol):
 
     def fetch_fixtures(self, competition: str) -> list[Fixture]:
         """Return fixtures for a competition."""
+
+
+@runtime_checkable
+class PlayerSource(Protocol):
+    """Optional interface for sources that also expose squad-level scoring data."""
+
+    def fetch_players(self, team: str) -> list[PlayerStats]:
+        """Return player scoring/assist records for a team."""
 
 
 DataSourceFactory = Callable[[], DataSource]

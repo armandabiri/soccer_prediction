@@ -41,13 +41,25 @@ class HalfTimePredictor:
         )
 
 
+_FIRST_HALF_SHARE = 0.45
+
+
+def _first_half_rate(full: float, half: float) -> float:
+    """Half-time rate, falling back to a 45% split when no half-time data exists."""
+    return half if half > 0.02 else _FIRST_HALF_SHARE * full
+
+
 def _half_expectations(rates: RateBook, home: str, away: str, *, first_half: bool) -> tuple[float, float]:
     home_rates = rates.for_team(home)
     away_rates = rates.for_team(away)
+    home_first_for = _first_half_rate(home_rates.goals_for, home_rates.ht_goals_for)
+    home_first_against = _first_half_rate(home_rates.goals_against, home_rates.ht_goals_against)
+    away_first_for = _first_half_rate(away_rates.goals_for, away_rates.ht_goals_for)
+    away_first_against = _first_half_rate(away_rates.goals_against, away_rates.ht_goals_against)
     if first_half:
-        home_rate = (home_rates.ht_goals_for + away_rates.ht_goals_against) / 2.0
-        away_rate = (away_rates.ht_goals_for + home_rates.ht_goals_against) / 2.0
+        home_rate = (home_first_for + away_first_against) / 2.0
+        away_rate = (away_first_for + home_first_against) / 2.0
     else:
-        home_rate = (home_rates.goals_for - home_rates.ht_goals_for + away_rates.goals_against) / 2.0
-        away_rate = (away_rates.goals_for - away_rates.ht_goals_for + home_rates.goals_against) / 2.0
+        home_rate = ((home_rates.goals_for - home_first_for) + (away_rates.goals_against - away_first_against)) / 2.0
+        away_rate = ((away_rates.goals_for - away_first_for) + (home_rates.goals_against - home_first_against)) / 2.0
     return max(0.05, home_rate), max(0.05, away_rate)

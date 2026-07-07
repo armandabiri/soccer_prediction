@@ -24,17 +24,20 @@ def test_switzerland_colombia_history_loads() -> None:
 
 def test_switzerland_colombia_reports_written(tmp_path: Path) -> None:
     """The example writes a non-trivial HTML and Markdown report."""
-    paths = write_reports(tmp_path)
+    paths = write_reports(tmp_path, live=False)
     html = paths["html"].read_text(encoding="utf-8")
     markdown = paths["md"].read_text(encoding="utf-8")
     assert html.startswith("<!doctype html>")
     assert "Switzerland" in html
     assert "Corners" in html
+    assert "Goalscorers" in html
+    assert "James Rodriguez" in html
     assert "Switzerland vs Colombia" in markdown
+    assert "### Goalscorers &amp; assists" in markdown or "### Goalscorers & assists" in markdown
 
 
 def test_switzerland_colombia_forecast_favours_stronger_side() -> None:
     """Colombia's stronger scoring history yields more expected corners."""
-    forecast = build_forecast()
+    forecast = build_forecast(live=False)
     assert forecast.corners.total_expected > 0.0
     assert 0.0 <= forecast.btts.probability <= 1.0

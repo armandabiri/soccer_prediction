@@ -132,6 +132,23 @@ soccer-predict predict --home Switzerland --away Colombia --source bundled_swi_c
 
 The bundled history is illustrative sample data for offline demos. In production the same models run on real data pulled from the free sources below.
 
+### Real World Cup 2026 results
+
+The `worldcup_2026` source fetches **actual, current WC2026 results** from the public-domain [openfootball](https://github.com/openfootball/worldcup.json) dataset (no API key, network required):
+
+```python
+from soccer_prediction.example.worldcup2026_live import forecast_wc2026, write_wc2026_report
+
+f = forecast_wc2026("Switzerland", "Colombia")   # forecasts from real group-stage results
+print(f.result.selection, f"{f.result.probability:.1%}")
+for r in f.history:                               # the real matches used
+    print(r.date, r.team, f"{r.goals_for}-{r.goals_against}", "vs", r.opponent)
+
+write_wc2026_report("Switzerland", "Colombia")    # reports/wc2026_switzerland_colombia.{html,md}
+```
+
+openfootball carries goals + half-time scores (so scoreline, 1X2, BTTS, over/under, and per-half markets use real data) but **no corners or cards** — use `source="api_football"` (free key) for those.
+
 ## CLI Reference
 
 | Command | Purpose | Key options |

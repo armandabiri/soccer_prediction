@@ -40,11 +40,27 @@ class CornersPredictor:
         )
 
 
+# League-average per-team corner rates, used when the data source has no corner
+# data (e.g. martj42 international results, which carry goals only).
+_PRIOR_CORNERS_FOR = 5.1
+_PRIOR_CORNERS_AGAINST = 4.9
+_HOME_CORNER_EDGE = 0.4
+
+
+def _corner_rate(value: float, prior: float) -> float:
+    """Use the observed corner rate, or a league-average prior when it is absent."""
+    return value if value > 0.5 else prior
+
+
 def _corner_expectations(rates: RateBook, home: str, away: str) -> tuple[float, float]:
     home_rates = rates.for_team(home)
     away_rates = rates.for_team(away)
-    home_expected = max(0.1, (home_rates.corners_for + away_rates.corners_against) / 2.0 + 0.25)
-    away_expected = max(0.1, (away_rates.corners_for + home_rates.corners_against) / 2.0)
+    home_for = _corner_rate(home_rates.corners_for, _PRIOR_CORNERS_FOR)
+    home_against = _corner_rate(home_rates.corners_against, _PRIOR_CORNERS_AGAINST)
+    away_for = _corner_rate(away_rates.corners_for, _PRIOR_CORNERS_FOR)
+    away_against = _corner_rate(away_rates.corners_against, _PRIOR_CORNERS_AGAINST)
+    home_expected = max(1.0, (home_for + away_against) / 2.0 + _HOME_CORNER_EDGE)
+    away_expected = max(1.0, (away_for + home_against) / 2.0)
     return home_expected, away_expected
 
 

@@ -8,9 +8,9 @@ from datetime import UTC, date, datetime
 from importlib import resources
 from typing import Any, cast
 
-from soccer_prediction.models import TeamMatchStats
+from soccer_prediction.models import PlayerStats, TeamMatchStats
 
-__all__ = ["load_packaged_history"]
+__all__ = ["load_packaged_history", "load_packaged_players"]
 
 _FETCHED_AT = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -25,6 +25,29 @@ def load_packaged_history(resource: str, source: str) -> list[TeamMatchStats]:
             if isinstance(row, dict):
                 records.append(_row_to_stats(cast("dict[str, Any]", row), source))
     return records
+
+
+def load_packaged_players(resource: str) -> list[PlayerStats]:
+    """Load a packaged JSON squad file (under this package) as typed players."""
+    raw = resources.files(__package__).joinpath(resource).read_text(encoding="utf-8")
+    parsed: object = json.loads(raw)
+    players: list[PlayerStats] = []
+    if isinstance(parsed, list):
+        for row in parsed:
+            if isinstance(row, dict):
+                players.append(_row_to_player(cast("dict[str, Any]", row)))
+    return players
+
+
+def _row_to_player(row: Mapping[str, Any]) -> PlayerStats:
+    return PlayerStats(
+        name=str(row["name"]),
+        team=str(row["team"]),
+        position=str(row["position"]),
+        appearances=int(row["appearances"]),
+        goals=int(row["goals"]),
+        assists=int(row["assists"]),
+    )
 
 
 def _row_to_stats(row: Mapping[str, Any], source: str) -> TeamMatchStats:

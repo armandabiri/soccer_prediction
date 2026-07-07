@@ -4,9 +4,23 @@ from __future__ import annotations
 
 import logging
 
-from soccer_prediction.datasources import DataSourceError, get_source
-from soccer_prediction.models import Fixture, MarketPrediction, MatchForecast, TeamMatchStats
-from soccer_prediction.predictors import CardsPredictor, CornersPredictor, HalfTimePredictor, derive_markets, get_model
+from soccer_prediction.datasources import DataSourceError, PlayerSource, get_source
+from soccer_prediction.models import (
+    Fixture,
+    MarketPrediction,
+    MatchForecast,
+    ScorelineGrid,
+    ScorerPrediction,
+    TeamMatchStats,
+)
+from soccer_prediction.predictors import (
+    CardsPredictor,
+    CornersPredictor,
+    HalfTimePredictor,
+    derive_markets,
+    get_model,
+    predict_scorers,
+)
 
 __all__ = ["forecast_fixture", "predict_match"]
 
@@ -46,6 +60,8 @@ def forecast_fixture(
         cards=cards.predict(home, away),
         model_name=model,
         generated_notes=tuple(notes),
+        history=tuple(history),
+        scorers=_load_scorers(source, home, away, correct_score),
     )
 
 
@@ -78,6 +94,22 @@ def _load_history(home: str, away: str, source: str) -> tuple[list[TeamMatchStat
         logger.warning("history load failed for %s v %s from %s: %s", home, away, source, exc)
         return [], [f"history unavailable from {source}: {exc}"]
     return history, [f"loaded {len(history)} history records from {source}"]
+
+
+def _load_scorers(source: str, home: str, away: str, grid: ScorelineGrid) -> ScorerPrediction | None:
+    if source == "auto":
+        return None
+    try:
+        data_source = get_source(source)
+    except KeyError:
+        return None
+    if not isinstance(data_source, PlayerSource):
+        return None
+    home_players = data_source.fetch_players(home)
+    away_players = data_source.fetch_players(away)
+    if not home_players and not away_players:
+        return None
+    return predict_scorers(grid, home_players, away_players)
 
 
 def _best_result(markets: dict[str, MarketPrediction]) -> MarketPrediction:

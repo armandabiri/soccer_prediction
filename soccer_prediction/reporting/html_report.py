@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from html import escape
 
 from soccer_prediction.models import MatchForecast, ScorelineGrid
@@ -37,14 +38,72 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .bar > span { position:absolute; inset:0 auto 0 0; background:var(--accent2); border-radius:6px; }
 .foot { color:var(--muted); font-size:.82rem; margin-top:24px; }
 .pill { display:inline-block; background:var(--bar); border-radius:999px; padding:2px 10px; font-size:.8rem; }
+.dot { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:7px;
+  vertical-align:middle; border:1px solid rgba(128,128,128,.35); }
+.legend { display:flex; flex-wrap:wrap; gap:16px; margin:-8px 0 18px; font-size:.85rem; }
+.chip { display:inline-flex; align-items:center; }
 """
 
+_FALLBACK_COLORS = (
+    "#2563eb",
+    "#dc2626",
+    "#059669",
+    "#d97706",
+    "#7c3aed",
+    "#0891b2",
+    "#db2777",
+    "#65a30d",
+)
+_TEAM_COLORS = {
+    "switzerland": "#d52b1e",
+    "colombia": "#fcd116",
+    "brazil": "#009c3b",
+    "argentina": "#6cabdd",
+    "france": "#274796",
+    "england": "#0a3d91",
+    "germany": "#3a3a3a",
+    "spain": "#c60b1e",
+    "italy": "#1c6fb3",
+    "portugal": "#006847",
+    "netherlands": "#f36c21",
+    "belgium": "#c8102e",
+    "mexico": "#006341",
+    "usa": "#1a3a6b",
+    "united states": "#1a3a6b",
+    "uruguay": "#5b9bd5",
+    "croatia": "#b81b2c",
+    "morocco": "#c1272d",
+    "japan": "#1b2a6b",
+    "canada": "#d80621",
+}
 
-def render_html(forecast: MatchForecast, *, title: str | None = None) -> str:
+
+def _team_color(team: str) -> str:
+    """Return a stable display colour for a team (curated, else hashed)."""
+    key = team.strip().casefold()
+    if key in _TEAM_COLORS:
+        return _TEAM_COLORS[key]
+    digest = 0
+    for char in key:
+        digest = (digest * 31 + ord(char)) & 0xFFFFFFFF
+    return _FALLBACK_COLORS[digest % len(_FALLBACK_COLORS)]
+
+
+def _dot(color: str) -> str:
+    return f'<span class="dot" style="background:{color}"></span>'
+
+
+def _team_legend(teams: list[str]) -> str:
+    chips = "".join(f'<span class="chip">{_dot(_team_color(team))}{escape(team)}</span>' for team in teams)
+    return f'<p class="legend">{chips}</p>'
+
+
+def render_html(forecast: MatchForecast, *, title: str | None = None, generated_at: datetime | None = None) -> str:
     """Render a MatchForecast as a styled, self-contained HTML document."""
     home = escape(forecast.fixture.home_team)
     away = escape(forecast.fixture.away_team)
     heading = escape(title) if title else f"{home} vs {away}"
+    stamp = (generated_at or datetime.now(UTC)).strftime("%Y-%m-%d_%H-%M-%S")
     home_p, draw_p, away_p = forecast.correct_score.home_draw_away()
     sections = [
         _tiles(forecast, home, away, home_p, away_p),
@@ -54,6 +113,8 @@ def render_html(forecast: MatchForecast, *, title: str | None = None) -> str:
         _half_section(forecast, home, away),
         _corners_section(forecast, home, away),
         _cards_section(forecast),
+        _scorers_section(forecast),
+        _history_section(forecast),
     ]
     notes = "; ".join(escape(note) for note in forecast.generated_notes) or "model priors"
     body = "\n".join(sections)
@@ -63,11 +124,73 @@ def render_html(forecast: MatchForecast, *, title: str | None = None) -> str:
         f'<title>{heading}</title><style>{_CSS}</style></head><body><div class="wrap">'
         f"<h1>{heading}</h1>"
         f'<p class="sub">Model: <span class="pill">{escape(forecast.model_name)}</span> '
-        f"&nbsp; Data: {notes}</p>"
+        f"&nbsp; Generated: {stamp} &nbsp; Data: {notes}</p>"
+        f"{_team_legend([forecast.fixture.home_team, forecast.fixture.away_team])}"
         f"{body}"
-        f'<p class="foot">Probabilities are model estimates from historical team stats. '
-        f"Per-half and minimum-corner figures are illustrative model outputs, not guaranteed outcomes.</p>"
+        f'<p class="foot">Generated {stamp}. Probabilities are model estimates from the historical '
+        f"team stats listed above; per-half and minimum-corner figures are illustrative outputs, "
+        f"not guaranteed outcomes.</p>"
         f"</div></body></html>"
+    )
+
+
+def _scorers_section(forecast: MatchForecast) -> str:
+    scorers = forecast.scorers
+    if scorers is None or not scorers.players:
+        return ""
+    rows: list[str] = []
+    for player in scorers.players[:12]:
+        color = _team_color(player.team)
+        rows.append(
+            f'<tr style="background:{color}22"><td>{escape(player.player)}</td>'
+            f"<td>{_dot(color)}{escape(player.team)}</td>"
+            f'<td class="n">{escape(player.position)}</td>'
+            f'<td class="n">{_pct(player.anytime_scorer)}</td>'
+            f'<td class="n">{_pct(player.to_score_or_assist)}</td>'
+            f'<td class="n">{_pct(player.first_scorer)}</td></tr>'
+        )
+    header = (
+        '<thead><tr><th>Player</th><th>Team</th><th class="n">Pos</th><th class="n">Anytime</th>'
+        '<th class="n">Score/assist</th><th class="n">First</th></tr></thead>'
+    )
+    return (
+        f'<h2>Goalscorers &amp; assists</h2><div class="card">'
+        f'<div style="overflow-x:auto"><table>{header}<tbody>{"".join(rows)}</tbody></table></div>'
+        f'<p class="foot">Anytime = to score anytime; Score/assist = to score or assist; '
+        f"First = to open the scoring. Share-based estimates from historical goal/assist involvement.</p></div>"
+    )
+
+
+def _history_section(forecast: MatchForecast) -> str:
+    if not forecast.history:
+        return (
+            '<h2>Historical data used</h2><div class="card">'
+            '<p class="sub">No historical data was available; model priors were used.</p></div>'
+        )
+    rows: list[str] = []
+    for record in sorted(forecast.history, key=lambda item: (item.team, item.date)):
+        venue = "H" if record.is_home else "A"
+        color = _team_color(record.team)
+        rows.append(
+            f'<tr style="background:{color}22"><td>{_dot(color)}{escape(record.team)}</td>'
+            f'<td class="n">{record.date.isoformat()}</td>'
+            f"<td>{escape(record.opponent)}</td>"
+            f'<td class="n">{venue}</td>'
+            f'<td class="n">{record.goals_for}-{record.goals_against}</td>'
+            f'<td class="n">{record.ht_goals_for}-{record.ht_goals_against}</td>'
+            f'<td class="n">{record.corners_for}-{record.corners_against}</td>'
+            f'<td class="n">{record.yellows}/{record.reds}</td></tr>'
+        )
+    header = (
+        '<thead><tr><th>Team</th><th class="n">Date</th><th>Opponent</th><th class="n">H/A</th>'
+        '<th class="n">Score</th><th class="n">HT</th><th class="n">Corners</th><th class="n">Y/R</th></tr></thead>'
+    )
+    sources = ", ".join(sorted({record.source for record in forecast.history}))
+    return (
+        f'<h2>Historical data used</h2><div class="card">'
+        f'<div style="overflow-x:auto"><table>{header}<tbody>{"".join(rows)}</tbody></table></div>'
+        f'<p class="foot">{len(forecast.history)} matches from: {escape(sources)}. '
+        f"Score = full-time goals for-against; HT = half-time; Corners = for-against; Y/R = yellow/red cards.</p></div>"
     )
 
 
@@ -75,10 +198,11 @@ def _pct(value: float) -> str:
     return f"{value * 100:.1f}%"
 
 
-def _row(label: str, probability: float) -> str:
+def _row(label: str, probability: float, color: str | None = None) -> str:
     width = max(0.0, min(100.0, probability * 100))
+    style = f' style="background:{color}22"' if color else ""
     return (
-        f"<tr><td>{label}</td>"
+        f"<tr{style}><td>{label}</td>"
         f'<td><div class="bar"><span style="width:{width:.1f}%"></span></div></td>'
         f'<td class="n">{_pct(probability)}</td></tr>'
     )
@@ -108,7 +232,13 @@ def _tiles(forecast: MatchForecast, home: str, away: str, home_p: float, away_p:
 
 
 def _result_section(home: str, away: str, home_p: float, draw_p: float, away_p: float) -> str:
-    rows = _row(f"{home} win", home_p) + _row("Draw", draw_p) + _row(f"{away} win", away_p)
+    home_color = _team_color(home)
+    away_color = _team_color(away)
+    rows = (
+        _row(f"{_dot(home_color)}{home} win", home_p, home_color)
+        + _row("Draw", draw_p)
+        + _row(f"{_dot(away_color)}{away} win", away_p, away_color)
+    )
     return _table("Match result (1X2)", "Outcome", rows)
 
 
@@ -174,7 +304,8 @@ def _corners_section(forecast: MatchForecast, home: str, away: str) -> str:
         f'<td class="n">-</td></tr>{lines}'
     )
     header = '<thead><tr><th>Corners market</th><th class="n">Expected</th><th class="n">Value</th></tr></thead>'
-    return f'<h2>Corners</h2><div class="card"><table>{header}<tbody>{body}</tbody></table></div>'
+    note = _prior_note(forecast, "corners", "corner")
+    return f'<h2>Corners</h2><div class="card"><table>{header}<tbody>{body}</tbody></table>{note}</div>'
 
 
 def _cards_section(forecast: MatchForecast) -> str:
@@ -191,7 +322,23 @@ def _cards_section(forecast: MatchForecast) -> str:
         f'<tr><td>Booking points (expected)</td><td class="n">{booking:.0f}</td></tr>{lines}'
     )
     header = '<thead><tr><th>Cards market</th><th class="n">Value</th></tr></thead>'
-    return f'<h2>Cards</h2><div class="card"><table>{header}<tbody>{body}</tbody></table></div>'
+    note = _prior_note(forecast, "cards", "card")
+    return f'<h2>Cards</h2><div class="card"><table>{header}<tbody>{body}</tbody></table>{note}</div>'
+
+
+def _prior_note(forecast: MatchForecast, kind: str, label: str) -> str:
+    if not forecast.history:
+        return ""
+    if kind == "corners":
+        empty = all(record.corners_for == 0 and record.corners_against == 0 for record in forecast.history)
+    else:
+        empty = all(record.yellows == 0 and record.reds == 0 for record in forecast.history)
+    if not empty:
+        return ""
+    return (
+        f'<p class="foot">The data source carries no {label} data, so league-average priors are '
+        f'shown here (not team-specific). Use source="api_football" (free key) for real {label} markets.</p>'
+    )
 
 
 def _table(heading: str, first_column: str, rows: str) -> str:

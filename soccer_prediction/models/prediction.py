@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
-from .match import Fixture
+from .match import Fixture, TeamMatchStats
+from .player import ScorerPrediction
 
 __all__ = [
     "CardsPrediction",
@@ -144,6 +145,8 @@ class MatchForecast:
     cards: CardsPrediction
     model_name: str
     generated_notes: tuple[str, ...] = ()
+    history: tuple[TeamMatchStats, ...] = ()
+    scorers: ScorerPrediction | None = None
 
 
 def example_usage() -> None:

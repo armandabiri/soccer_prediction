@@ -1,0 +1,5 @@
+[
+  {"home": "Brazil", "away": "Argentina", "date": "2024-01-01", "score": [2, 1]},
+  {"home": "Argentina", "away": "Brazil", "date": "2024-02-01", "score": [1, 1]},
+  {"home": "Brazil", "away": "Argentina", "date": "2024-03-01", "score": [3, 0]}
+]

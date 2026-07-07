@@ -1,0 +1,23 @@
+[
+  {"team": "Switzerland", "opponent": "Hungary", "date": "2024-06-15", "is_home": true, "goals_for": 3, "goals_against": 1, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 6, "corners_against": 3, "yellows": 2, "reds": 0},
+  {"team": "Switzerland", "opponent": "Scotland", "date": "2024-06-19", "is_home": true, "goals_for": 1, "goals_against": 1, "ht_goals_for": 0, "ht_goals_against": 1, "corners_for": 5, "corners_against": 4, "yellows": 1, "reds": 0},
+  {"team": "Switzerland", "opponent": "Germany", "date": "2024-06-23", "is_home": false, "goals_for": 1, "goals_against": 1, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 4, "corners_against": 6, "yellows": 3, "reds": 0},
+  {"team": "Switzerland", "opponent": "Italy", "date": "2024-06-29", "is_home": false, "goals_for": 2, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 5, "corners_against": 5, "yellows": 2, "reds": 0},
+  {"team": "Switzerland", "opponent": "Denmark", "date": "2024-09-07", "is_home": false, "goals_for": 0, "goals_against": 2, "ht_goals_for": 0, "ht_goals_against": 1, "corners_for": 3, "corners_against": 7, "yellows": 2, "reds": 1},
+  {"team": "Switzerland", "opponent": "Spain", "date": "2024-10-12", "is_home": true, "goals_for": 1, "goals_against": 4, "ht_goals_for": 0, "ht_goals_against": 2, "corners_for": 4, "corners_against": 8, "yellows": 3, "reds": 0},
+  {"team": "Switzerland", "opponent": "Serbia", "date": "2024-11-15", "is_home": true, "goals_for": 1, "goals_against": 1, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 6, "corners_against": 5, "yellows": 2, "reds": 0},
+  {"team": "Switzerland", "opponent": "Kosovo", "date": "2025-03-22", "is_home": false, "goals_for": 2, "goals_against": 1, "ht_goals_for": 1, "ht_goals_against": 1, "corners_for": 5, "corners_against": 4, "yellows": 2, "reds": 0},
+  {"team": "Switzerland", "opponent": "Mexico", "date": "2025-06-07", "is_home": true, "goals_for": 4, "goals_against": 2, "ht_goals_for": 2, "ht_goals_against": 1, "corners_for": 7, "corners_against": 5, "yellows": 1, "reds": 0},
+  {"team": "Switzerland", "opponent": "Sweden", "date": "2025-09-05", "is_home": false, "goals_for": 2, "goals_against": 2, "ht_goals_for": 1, "ht_goals_against": 1, "corners_for": 5, "corners_against": 6, "yellows": 2, "reds": 0},
+
+  {"team": "Colombia", "opponent": "United States", "date": "2024-06-08", "is_home": false, "goals_for": 5, "goals_against": 1, "ht_goals_for": 2, "ht_goals_against": 0, "corners_for": 8, "corners_against": 3, "yellows": 1, "reds": 0},
+  {"team": "Colombia", "opponent": "Bolivia", "date": "2024-06-15", "is_home": true, "goals_for": 3, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 7, "corners_against": 2, "yellows": 2, "reds": 0},
+  {"team": "Colombia", "opponent": "Paraguay", "date": "2024-06-24", "is_home": false, "goals_for": 2, "goals_against": 1, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 6, "corners_against": 4, "yellows": 2, "reds": 0},
+  {"team": "Colombia", "opponent": "Costa Rica", "date": "2024-06-28", "is_home": false, "goals_for": 3, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 7, "corners_against": 3, "yellows": 1, "reds": 0},
+  {"team": "Colombia", "opponent": "Panama", "date": "2024-07-06", "is_home": false, "goals_for": 5, "goals_against": 0, "ht_goals_for": 3, "ht_goals_against": 0, "corners_for": 9, "corners_against": 2, "yellows": 1, "reds": 0},
+  {"team": "Colombia", "opponent": "Uruguay", "date": "2024-07-10", "is_home": false, "goals_for": 1, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 5, "corners_against": 5, "yellows": 3, "reds": 1},
+  {"team": "Colombia", "opponent": "Argentina", "date": "2024-07-14", "is_home": false, "goals_for": 0, "goals_against": 1, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 4, "corners_against": 7, "yellows": 4, "reds": 0},
+  {"team": "Colombia", "opponent": "Chile", "date": "2024-10-15", "is_home": true, "goals_for": 4, "goals_against": 0, "ht_goals_for": 2, "ht_goals_against": 0, "corners_for": 8, "corners_against": 3, "yellows": 2, "reds": 0},
+  {"team": "Colombia", "opponent": "Paraguay", "date": "2025-03-25", "is_home": true, "goals_for": 1, "goals_against": 2, "ht_goals_for": 0, "ht_goals_against": 1, "corners_for": 6, "corners_against": 5, "yellows": 3, "reds": 0},
+  {"team": "Colombia", "opponent": "Peru", "date": "2025-06-10", "is_home": false, "goals_for": 0, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 5, "corners_against": 4, "yellows": 2, "reds": 0}
+]

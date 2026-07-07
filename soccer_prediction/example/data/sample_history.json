@@ -1,0 +1,14 @@
+[
+  {"team": "Brazil", "opponent": "Argentina", "date": "2025-06-01", "is_home": true, "goals_for": 2, "goals_against": 1, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 6, "corners_against": 4, "yellows": 2, "reds": 0},
+  {"team": "Argentina", "opponent": "Brazil", "date": "2025-06-01", "is_home": false, "goals_for": 1, "goals_against": 2, "ht_goals_for": 0, "ht_goals_against": 1, "corners_for": 4, "corners_against": 6, "yellows": 3, "reds": 0},
+  {"team": "Brazil", "opponent": "France", "date": "2025-09-01", "is_home": true, "goals_for": 3, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 7, "corners_against": 3, "yellows": 1, "reds": 0},
+  {"team": "France", "opponent": "Brazil", "date": "2025-09-01", "is_home": false, "goals_for": 0, "goals_against": 3, "ht_goals_for": 0, "ht_goals_against": 1, "corners_for": 3, "corners_against": 7, "yellows": 2, "reds": 0},
+  {"team": "Argentina", "opponent": "Brazil", "date": "2025-10-01", "is_home": true, "goals_for": 1, "goals_against": 1, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 5, "corners_against": 5, "yellows": 3, "reds": 0},
+  {"team": "Brazil", "opponent": "Argentina", "date": "2025-10-01", "is_home": false, "goals_for": 1, "goals_against": 1, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 5, "corners_against": 5, "yellows": 2, "reds": 0},
+  {"team": "Argentina", "opponent": "England", "date": "2025-11-01", "is_home": true, "goals_for": 2, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 6, "corners_against": 4, "yellows": 2, "reds": 0},
+  {"team": "England", "opponent": "Argentina", "date": "2025-11-01", "is_home": false, "goals_for": 0, "goals_against": 2, "ht_goals_for": 0, "ht_goals_against": 1, "corners_for": 4, "corners_against": 6, "yellows": 3, "reds": 1},
+  {"team": "France", "opponent": "England", "date": "2025-06-15", "is_home": true, "goals_for": 2, "goals_against": 1, "ht_goals_for": 1, "ht_goals_against": 1, "corners_for": 5, "corners_against": 6, "yellows": 2, "reds": 0},
+  {"team": "England", "opponent": "France", "date": "2025-06-15", "is_home": false, "goals_for": 1, "goals_against": 2, "ht_goals_for": 1, "ht_goals_against": 1, "corners_for": 6, "corners_against": 5, "yellows": 2, "reds": 0},
+  {"team": "England", "opponent": "Brazil", "date": "2025-03-01", "is_home": true, "goals_for": 1, "goals_against": 2, "ht_goals_for": 0, "ht_goals_against": 1, "corners_for": 4, "corners_against": 7, "yellows": 3, "reds": 0},
+  {"team": "Brazil", "opponent": "England", "date": "2025-03-01", "is_home": false, "goals_for": 2, "goals_against": 1, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 7, "corners_against": 4, "yellows": 1, "reds": 0}
+]

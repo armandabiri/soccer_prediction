@@ -1,0 +1,16 @@
+api_football:
+  api_key: ""
+  host: "v3.football.api-sports.io"
+cache:
+  dir: ".cache/soccer_prediction"
+  ttl_hours: 24
+rate_limits:
+  api_football: 100
+  football_data_csv: 0
+  worldcup_open: 0
+  statsbomb: 0
+model:
+  time_decay_xi: 0.0039
+  recency_window_days: 730
+  max_goals: 8
+

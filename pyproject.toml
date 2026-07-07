@@ -1,0 +1,97 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "soccer-prediction"
+version = "0.1.0"
+description = "Forecast soccer matches (World Cup 2026) from free historical stats: scorelines, per-half, corners, cards, BTTS, over/under."
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Arman Dabiri" }]
+keywords = ["soccer", "football", "prediction", "poisson", "dixon-coles", "world-cup", "corners"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Mathematics",
+  "Operating System :: OS Independent",
+]
+# Runtime is pure-Python (stdlib) plus these light dependencies; the heavy
+# scientific stack is optional acceleration under the `accel` extra so that
+# `pip install` stays fast and portable.
+dependencies = [
+  "typer>=0.9",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+accel = [
+  "numpy>=1.24",
+  "scipy>=1.10",
+  "pandas>=2.0",
+  "statsmodels>=0.14",
+  "penaltyblog>=1.0",
+  "statsbombpy>=1.11",
+  "requests>=2.28",
+]
+dev = [
+  "pytest>=7.0",
+  "pytest-cov>=4.0",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "types-PyYAML>=6.0",
+  "build>=1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/armandabiri/soccer-prediction"
+Source = "https://github.com/armandabiri/soccer-prediction"
+
+[project.scripts]
+soccer-predict = "soccer_prediction:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["soccer_prediction*"]
+
+[tool.setuptools.package-data]
+soccer_prediction = ["py.typed", "config/defaults.yaml", "example/data/*.json"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+show_error_codes = true
+pretty = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+no_implicit_reexport = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = ["statsbombpy.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["soccer_prediction"]
+
+[tool.coverage.report]
+fail_under = 70

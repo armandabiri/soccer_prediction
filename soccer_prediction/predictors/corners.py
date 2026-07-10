@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import date
 
 from soccer_prediction.features import RateBook, compute_rates
 from soccer_prediction.models import CornersPrediction, TeamMatchStats
@@ -17,13 +18,15 @@ class CornersPredictor:
     def __init__(self) -> None:
         self._rates = compute_rates([])
 
-    def fit(self, history: Sequence[TeamMatchStats]) -> None:
+    def fit(self, history: Sequence[TeamMatchStats], *, as_of: date | None = None) -> None:
         """Fit corner rates."""
-        self._rates = compute_rates(history)
+        self._rates = compute_rates(history, today=as_of)
 
-    def predict(self, home: str, away: str) -> CornersPrediction:
+    def predict(self, home: str, away: str, *, neutral_venue: bool = False) -> CornersPrediction:
         """Return total and minimum corner estimates."""
-        home_expected, away_expected = _corner_expectations(self._rates, home, away)
+        home_expected, away_expected = _corner_expectations(
+            self._rates, home, away, neutral_venue=neutral_venue
+        )
         total_expected = home_expected + away_expected
         total_lines = {line: poisson_tail_at_least(total_expected, int(line + 0.5)) for line in (7.5, 8.5, 9.5, 10.5)}
         home_minimum = _quantile_floor(home_expected, 0.10)
@@ -52,7 +55,9 @@ def _corner_rate(value: float, prior: float) -> float:
     return value if value > 0.5 else prior
 
 
-def _corner_expectations(rates: RateBook, home: str, away: str) -> tuple[float, float]:
+def _corner_expectations(
+    rates: RateBook, home: str, away: str, *, neutral_venue: bool = False
+) -> tuple[float, float]:
     if rates.corner_attack_factors:
         league_rate = max(rates.global_rates.corners_for, _PRIOR_CORNERS_FOR)
         home_expected = league_rate * rates.corner_attack_for(home) * rates.corner_concession_for(away)
@@ -61,7 +66,7 @@ def _corner_expectations(rates: RateBook, home: str, away: str) -> tuple[float, 
             rates,
             home,
             away,
-            home_expected + _HOME_CORNER_EDGE,
+            home_expected + (0.0 if neutral_venue else _HOME_CORNER_EDGE),
             away_expected,
         )
         return max(1.0, home_expected), max(1.0, away_expected)
@@ -71,7 +76,8 @@ def _corner_expectations(rates: RateBook, home: str, away: str) -> tuple[float, 
     home_against = _corner_rate(home_rates.corners_against, _PRIOR_CORNERS_AGAINST)
     away_for = _corner_rate(away_rates.corners_for, _PRIOR_CORNERS_FOR)
     away_against = _corner_rate(away_rates.corners_against, _PRIOR_CORNERS_AGAINST)
-    home_expected = max(1.0, (home_for + away_against) / 2.0 + _HOME_CORNER_EDGE)
+    home_edge = 0.0 if neutral_venue else _HOME_CORNER_EDGE
+    home_expected = max(1.0, (home_for + away_against) / 2.0 + home_edge)
     away_expected = max(1.0, (away_for + home_against) / 2.0)
     return home_expected, away_expected
 

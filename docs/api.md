@@ -22,10 +22,10 @@ Return a single market: `result`, `over_under`, `btts`, or any key from `derive_
 | Type | Key fields |
 | --- | --- |
 | `MatchForecast` | `result`, `correct_score` (`ScorelineGrid`), `over_under`, `btts`, `per_half`, `corners`, `cards`, `scenario_analysis`, `matchup_context`, `model_name`, `generated_notes` |
-| `ScenarioAnalysis` | simulation count and goal intervals, clean-sheet/tail probabilities, model disagreement, outcome uncertainty, `model_estimates` |
+| `ScenarioAnalysis` | simulation/goal ranges, 1X2 confidence intervals, tail probabilities, model/data uncertainty, `model_estimates` |
 | `ModelEstimate` | one model's 1X2 probabilities and home/away expected goals |
 | `MatchupContext` | recent forms, direct-meeting record, opponent-network paths/coverage, and inferred game style |
-| `TeamForm` | recency-weighted effective sample, points, goals, corners, and last-five result labels |
+| `TeamForm` | recency-weighted effective sample, points, goals, corners, morale index/label, current streak, last-five results |
 | `PlayerStats` | career appearances/goals/assists plus optional matched `recent_*` fields covering at most 20 appearances |
 | `PlayerMarketPrediction` | separate score/assist probabilities, combined and first-scorer probabilities, recent-form display metrics |
 | `ScorelineGrid` | `home_draw_away()`, `both_teams_to_score()`, `over_under(line)`, `total_probability()`, `cell_probability(h, a)` |
@@ -65,5 +65,7 @@ Return a single market: `result`, `over_under`, `btts`, or any key from `derive_
 | `SOCCER_PREDICTION_MODEL_RANDOM_SEED` | `model.random_seed` | `2026` |
 | `SOCCER_PREDICTION_MODEL_OPPONENT_NETWORK_DEPTH` | `model.opponent_network_depth` | `1` |
 | `SOCCER_PREDICTION_MODEL_OPPONENT_NETWORK_MAX_TEAMS` | `model.opponent_network_max_teams` | `12` |
+| `SOCCER_PREDICTION_MODEL_MORALE_DECAY_XI` | `model.morale_decay_xi` | `0.0077` |
+| `SOCCER_PREDICTION_MODEL_MORALE_MAX_EFFECT` | `model.morale_max_effect` | `0.08` |
 
 API keys are read from the environment only; never commit them.

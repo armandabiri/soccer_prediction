@@ -6,7 +6,36 @@ from html import escape
 
 from soccer_prediction.models import MatchForecast
 
-__all__ = ["scenario_section"]
+__all__ = ["confidence_interval_section", "scenario_section"]
+
+
+def confidence_interval_section(forecast: MatchForecast) -> str:
+    """Render 1X2 point estimates with approximate confidence whiskers."""
+    analysis = forecast.scenario_analysis
+    if analysis is None:
+        return ""
+    home_probability, draw_probability, away_probability = forecast.correct_score.home_draw_away()
+    outcomes = (
+        (forecast.fixture.home_team, home_probability, analysis.home_win_interval),
+        ("Draw", draw_probability, analysis.draw_interval),
+        (forecast.fixture.away_team, away_probability, analysis.away_win_interval),
+    )
+    rows: list[str] = []
+    for label, probability, interval in outcomes:
+        lower, upper = interval
+        rows.append(
+            f'<div class="ci-row"><div>{escape(label)}</div><div class="ci-track">'
+            f'<span class="ci-range" style="left:{lower * 100:.1f}%;width:{(upper - lower) * 100:.1f}%"></span>'
+            f'<span class="ci-point" style="left:{probability * 100:.1f}%"></span></div>'
+            f'<div class="ci-value">{probability:.1%} ({lower:.1%}–{upper:.1%})</div></div>'
+        )
+    level = analysis.confidence_level
+    return (
+        f'<h2>Result confidence intervals</h2><div class="card"><div class="ci-chart">{"".join(rows)}</div>'
+        f'<p class="foot">Point marker and approximate {level:.0%} interval. The interval combines the '
+        f"recency-weighted effective sample with disagreement between model families; it is a diagnostic "
+        f"uncertainty range, not a guarantee.</p></div>"
+    )
 
 
 def scenario_section(forecast: MatchForecast) -> str:

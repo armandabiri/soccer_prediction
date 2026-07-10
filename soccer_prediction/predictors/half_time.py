@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import date
 
 from soccer_prediction.features import RateBook, compute_rates
 from soccer_prediction.models import MarketPrediction, PerHalfPrediction, TeamMatchStats
@@ -18,9 +19,9 @@ class HalfTimePredictor:
         self.max_goals = max_goals
         self._rates = compute_rates([])
 
-    def fit(self, history: Sequence[TeamMatchStats]) -> None:
+    def fit(self, history: Sequence[TeamMatchStats], *, as_of: date | None = None) -> None:
         """Fit half-time and second-half rates."""
-        self._rates = compute_rates(history)
+        self._rates = compute_rates(history, today=as_of)
 
     def predict(self, home: str, away: str) -> PerHalfPrediction:
         """Return per-half score grids and summary markets."""

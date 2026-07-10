@@ -12,11 +12,13 @@ def test_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SOCCER_PREDICTION_MODEL_MAX_GOALS", "5")
     monkeypatch.setenv("SOCCER_PREDICTION_MODEL_SCENARIO_SIMULATIONS", "2500")
     monkeypatch.setenv("SOCCER_PREDICTION_MODEL_OPPONENT_NETWORK_DEPTH", "2")
+    monkeypatch.setenv("SOCCER_PREDICTION_MODEL_MORALE_MAX_EFFECT", "0.05")
     monkeypatch.setenv("SOCCER_PREDICTION_API_FOOTBALL_KEY", "secret-from-env")
     config = load_config()
     assert config.model.max_goals == 5
     assert config.model.scenario_simulations == 2500
     assert config.model.opponent_network_depth == 2
+    assert config.model.morale_max_effect == 0.05
     assert config.api_football.api_key == "secret-from-env"
 
 

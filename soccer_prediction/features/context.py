@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from datetime import date
 
 from soccer_prediction.config import load_config
+from soccer_prediction.features.morale import morale_label, morale_signal
 from soccer_prediction.models import (
     CardsPrediction,
     CornersPrediction,
@@ -27,11 +28,13 @@ def build_matchup_context(
     grid: ScorelineGrid,
     corners: CornersPrediction,
     cards: CardsPrediction,
+    *,
+    as_of: date | None = None,
 ) -> MatchupContext:
     """Summarize the evidence that explains a fixture forecast."""
-    home_form = _team_form(history, home)
-    away_form = _team_form(history, away)
-    h2h = _head_to_head(history, home, away)
+    home_form = _team_form(history, home, as_of=as_of)
+    away_form = _team_form(history, away, as_of=as_of)
+    h2h = _head_to_head(history, home, away, as_of=as_of)
     paths = _connection_paths(history, home, away)
     teams = {
         name.casefold()
@@ -60,7 +63,9 @@ def build_matchup_context(
     )
 
 
-def _team_form(history: Sequence[TeamMatchStats], team: str) -> TeamForm:
+def _team_form(
+    history: Sequence[TeamMatchStats], team: str, *, as_of: date | None = None
+) -> TeamForm:
     records = sorted(
         (record for record in history if record.team.casefold() == team.casefold()),
         key=lambda item: item.date,
@@ -68,8 +73,9 @@ def _team_form(history: Sequence[TeamMatchStats], team: str) -> TeamForm:
     )
     if not records:
         return TeamForm(team, 0, 0.0, 0.0, 0.0, 0.0, 0.0)
-    xi = max(load_config().model.time_decay_xi, 0.0)
-    today = date.today()
+    config = load_config().model
+    xi = max(config.time_decay_xi, 0.0)
+    today = date.today() if as_of is None else as_of
     weighted_points = 0.0
     weighted_goals_for = 0.0
     weighted_goals_against = 0.0
@@ -93,6 +99,8 @@ def _team_form(history: Sequence[TeamMatchStats], team: str) -> TeamForm:
         f"{_result_letter(record)} {record.goals_for}-{record.goals_against} vs {record.opponent}"
         for record in records[:5]
     )
+    anchor = today
+    morale, streak = morale_signal(history, team, config.morale_decay_xi, anchor=anchor)
     return TeamForm(
         team=team,
         matches=len(records),
@@ -102,6 +110,9 @@ def _team_form(history: Sequence[TeamMatchStats], team: str) -> TeamForm:
         goals_against_per_match=weighted_goals_against / denominator,
         corners_for_per_match=weighted_corners / denominator,
         recent_results=recent_results,
+        morale_index=morale,
+        morale_label=morale_label(morale),
+        result_streak=streak,
     )
 
 
@@ -117,6 +128,8 @@ def _head_to_head(
     history: Sequence[TeamMatchStats],
     home: str,
     away: str,
+    *,
+    as_of: date | None = None,
 ) -> tuple[int, int, int, int, float, float]:
     home_rows = [
         record
@@ -141,7 +154,7 @@ def _head_to_head(
     draws = sum(record.goals_for == record.goals_against for record in rows)
     away_wins = len(rows) - home_wins - draws
     xi = max(load_config().model.time_decay_xi, 0.0)
-    anchor = date.today()
+    anchor = date.today() if as_of is None else as_of
     weights = [math.exp(-xi * max((anchor - record.date).days, 0)) for record in rows]
     total_weight = max(sum(weights), 1e-9)
     average_goals = sum(

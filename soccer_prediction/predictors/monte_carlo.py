@@ -6,6 +6,7 @@ import hashlib
 import math
 import random
 from collections.abc import Sequence
+from datetime import date
 
 from soccer_prediction.config import load_config
 from soccer_prediction.features import compute_rates
@@ -15,6 +16,8 @@ from soccer_prediction.predictors.markets import derive_markets
 from soccer_prediction.predictors.poisson import expected_goals
 
 __all__ = ["MonteCarloPredictor"]
+
+_SCENARIO_MEAN_FACTOR = 1.0413
 
 
 class MonteCarloPredictor:
@@ -34,13 +37,13 @@ class MonteCarloPredictor:
             raise ValueError("simulations must be positive")
         self._rates = compute_rates([])
 
-    def fit(self, history: Sequence[TeamMatchStats]) -> None:
+    def fit(self, history: Sequence[TeamMatchStats], *, as_of: date | None = None) -> None:
         """Fit baseline goal rates; match-state variation is simulated at prediction time."""
-        self._rates = compute_rates(history)
+        self._rates = compute_rates(history, today=as_of)
 
-    def predict_scoreline(self, home: str, away: str) -> ScorelineGrid:
+    def predict_scoreline(self, home: str, away: str, *, neutral_venue: bool = False) -> ScorelineGrid:
         """Simulate and aggregate a deterministic scoreline grid for this fixture."""
-        home_mean, away_mean = expected_goals(self._rates, home, away)
+        home_mean, away_mean = expected_goals(self._rates, home, away, neutral_venue=neutral_venue)
         rng = random.Random(_fixture_seed(self.seed, home, away, home_mean, away_mean))
         counts = [[0 for _ in range(self.max_goals + 1)] for _ in range(self.max_goals + 1)]
         for _ in range(self.simulations):
@@ -51,9 +54,11 @@ class MonteCarloPredictor:
         rows = tuple(tuple(value / self.simulations for value in row) for row in counts)
         return ScorelineGrid(self.max_goals, self.max_goals, rows)
 
-    def predict_market(self, home: str, away: str, market: str) -> MarketPrediction:
+    def predict_market(
+        self, home: str, away: str, market: str, *, neutral_venue: bool = False
+    ) -> MarketPrediction:
         """Predict a market derived from simulated scorelines."""
-        return derive_markets(self.predict_scoreline(home, away))[market]
+        return derive_markets(self.predict_scoreline(home, away, neutral_venue=neutral_venue))[market]
 
 
 def _scenario_rates(rng: random.Random, home_mean: float, away_mean: float) -> tuple[float, float]:
@@ -66,10 +71,16 @@ def _scenario_rates(rng: random.Random, home_mean: float, away_mean: float) -> t
     elif roll < 0.20:  # Open/end-to-end state.
         tempo *= rng.uniform(1.35, 1.85)
     elif roll < 0.26:  # Home-side momentum or an early away red card.
-        return home_mean * tempo * 1.55, away_mean * tempo * 0.78
+        return (
+            home_mean * tempo * 1.55 / _SCENARIO_MEAN_FACTOR,
+            away_mean * tempo * 0.78 / _SCENARIO_MEAN_FACTOR,
+        )
     elif roll < 0.32:  # Away-side momentum or an early home red card.
-        return home_mean * tempo * 0.78, away_mean * tempo * 1.55
-    return home_mean * tempo, away_mean * tempo
+        return (
+            home_mean * tempo * 0.78 / _SCENARIO_MEAN_FACTOR,
+            away_mean * tempo * 1.55 / _SCENARIO_MEAN_FACTOR,
+        )
+    return home_mean * tempo / _SCENARIO_MEAN_FACTOR, away_mean * tempo / _SCENARIO_MEAN_FACTOR
 
 
 def _sample_poisson(rng: random.Random, rate: float) -> int:

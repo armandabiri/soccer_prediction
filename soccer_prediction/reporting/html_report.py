@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from html import escape
 
 from soccer_prediction.models import MatchForecast, ScorelineGrid
-from soccer_prediction.reporting.html_analysis import scenario_section
+from soccer_prediction.reporting.html_analysis import confidence_interval_section, scenario_section
 from soccer_prediction.reporting.html_components import (
     _CSS,
     _dot,
@@ -28,8 +28,9 @@ def render_html(forecast: MatchForecast, *, title: str | None = None, generated_
     stamp = (generated_at or datetime.now(UTC)).strftime("%Y-%m-%d_%H-%M-%S")
     home_p, draw_p, away_p = forecast.correct_score.home_draw_away()
     sections = [
-        _tiles(forecast, home, away, home_p, away_p),
+        _tiles(forecast, home, away, home_p, draw_p, away_p),
         _result_section(home, away, home_p, draw_p, away_p),
+        confidence_interval_section(forecast),
         scenario_section(forecast),
         context_section(forecast),
         _knockout_section(forecast, home, away),
@@ -80,8 +81,15 @@ def _top_score(grid: ScorelineGrid) -> str:
     return best_label
 
 
-def _tiles(forecast: MatchForecast, home: str, away: str, home_p: float, away_p: float) -> str:
-    result = home if home_p >= away_p else away
+def _tiles(
+    forecast: MatchForecast,
+    home: str,
+    away: str,
+    home_p: float,
+    draw_p: float,
+    away_p: float,
+) -> str:
+    result = max(((home, home_p), ("Draw", draw_p), (away, away_p)), key=lambda item: item[1])[0]
     tiles = [
         ("Most likely result", escape(result)),
         ("Likeliest score", _top_score(forecast.correct_score)),

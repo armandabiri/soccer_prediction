@@ -47,7 +47,13 @@ def _factory() -> BundledWorldCupSource:
 
 def run_example() -> str:
     """Forecast the sample fixture from bundled data and print the report."""
-    forecast = forecast_fixture(_SAMPLE_HOME, _SAMPLE_AWAY, model="ensemble", source=_SOURCE)
+    forecast = forecast_fixture(
+        _SAMPLE_HOME,
+        _SAMPLE_AWAY,
+        model="ensemble",
+        source=_SOURCE,
+        neutral_venue=True,
+    )
     text = render_text(forecast)
     print(text)
     return text

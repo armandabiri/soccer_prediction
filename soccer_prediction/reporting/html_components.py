@@ -44,7 +44,15 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .player-form-track { height:12px; border-radius:7px; background:var(--bar); overflow:hidden; }
 .player-form-fill { height:100%; border-radius:7px; }
 .player-form-value { text-align:right; color:var(--muted); font-size:.8rem; font-variant-numeric:tabular-nums; }
+.ci-chart { display:grid; gap:12px; padding:12px 0 4px; }
+.ci-row { display:grid; grid-template-columns:minmax(120px,1fr) minmax(220px,3fr) 145px; gap:12px; align-items:center; }
+.ci-track { position:relative; height:14px; border-radius:8px; background:var(--bar); }
+.ci-range { position:absolute; top:3px; height:8px; border-radius:5px; background:var(--accent2); opacity:.42; }
+.ci-point { position:absolute; top:-3px; width:4px; height:14px; margin-left:-2px;
+  border-radius:3px; background:var(--accent2); }
+.ci-value { text-align:right; color:var(--muted); font-size:.82rem; font-variant-numeric:tabular-nums; }
 @media (max-width:600px) { .player-form-row { grid-template-columns:minmax(105px,1fr) minmax(100px,2fr) 76px; } }
+@media (max-width:600px) { .ci-row { grid-template-columns:90px minmax(100px,2fr) 112px; } }
 .foot { color:var(--muted); font-size:.82rem; margin-top:24px; }
 .pill { display:inline-block; background:var(--bar); border-radius:999px; padding:2px 10px; font-size:.8rem; }
 .dot { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:7px;

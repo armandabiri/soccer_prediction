@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
+from datetime import date
 
 from soccer_prediction.config import load_config
 from soccer_prediction.features import compute_rates
@@ -24,21 +25,23 @@ class BivariatePoissonPredictor:
         self.shared_share = 0.08 if shared_share is None else shared_share
         self._rates = compute_rates([])
 
-    def fit(self, history: Sequence[TeamMatchStats]) -> None:
+    def fit(self, history: Sequence[TeamMatchStats], *, as_of: date | None = None) -> None:
         """Fit goal rates and estimate positive within-match goal covariance."""
-        self._rates = compute_rates(history)
+        self._rates = compute_rates(history, today=as_of)
         if self._fixed_shared_share is None:
             self.shared_share = _estimate_shared_share(history)
 
-    def predict_scoreline(self, home: str, away: str) -> ScorelineGrid:
+    def predict_scoreline(self, home: str, away: str, *, neutral_venue: bool = False) -> ScorelineGrid:
         """Predict a correlated scoreline grid."""
-        home_mean, away_mean = expected_goals(self._rates, home, away)
+        home_mean, away_mean = expected_goals(self._rates, home, away, neutral_venue=neutral_venue)
         shared = min(home_mean, away_mean) * self.shared_share
         return bivariate_poisson_grid(home_mean, away_mean, self.max_goals, shared)
 
-    def predict_market(self, home: str, away: str, market: str) -> MarketPrediction:
+    def predict_market(
+        self, home: str, away: str, market: str, *, neutral_venue: bool = False
+    ) -> MarketPrediction:
         """Predict a market derived from the scoreline grid."""
-        return derive_markets(self.predict_scoreline(home, away))[market]
+        return derive_markets(self.predict_scoreline(home, away, neutral_venue=neutral_venue))[market]
 
 
 def bivariate_poisson_grid(
@@ -50,20 +53,34 @@ def bivariate_poisson_grid(
     """Build a normalized grid from two private and one shared Poisson process."""
     if shared_rate < 0 or shared_rate >= min(home_mean, away_mean):
         raise ValueError("shared_rate must be non-negative and below both means")
+    if max_goals < 0:
+        raise ValueError("max_goals must be non-negative")
+    if max_goals == 0:
+        return ScorelineGrid(0, 0, ((1.0,),))
     home_private = home_mean - shared_rate
     away_private = away_mean - shared_rate
-    rows: list[tuple[float, ...]] = []
-    for home_goals in range(max_goals + 1):
-        row: list[float] = []
-        for away_goals in range(max_goals + 1):
+    rows = [[0.0 for _ in range(max_goals + 1)] for _ in range(max_goals + 1)]
+    for home_goals in range(max_goals):
+        for away_goals in range(max_goals):
             probability = sum(
                 _poisson_pmf(home_goals - shared, home_private)
                 * _poisson_pmf(away_goals - shared, away_private)
                 * _poisson_pmf(shared, shared_rate)
                 for shared in range(min(home_goals, away_goals) + 1)
             )
-            row.append(probability)
-        rows.append(tuple(row))
+            rows[home_goals][away_goals] = probability
+    for away_goals in range(max_goals):
+        away_marginal = _poisson_pmf(away_goals, away_mean)
+        rows[max_goals][away_goals] = max(
+            0.0, away_marginal - sum(rows[home][away_goals] for home in range(max_goals))
+        )
+    for home_goals in range(max_goals):
+        home_marginal = _poisson_pmf(home_goals, home_mean)
+        rows[home_goals][max_goals] = max(0.0, home_marginal - sum(rows[home_goals][:max_goals]))
+    rows[max_goals][max_goals] = max(
+        0.0,
+        1.0 - sum(value for row in rows for value in row),
+    )
     total = sum(value for row in rows for value in row)
     normalized = tuple(tuple(value / total for value in row) for row in rows)
     return ScorelineGrid(max_goals, max_goals, normalized)

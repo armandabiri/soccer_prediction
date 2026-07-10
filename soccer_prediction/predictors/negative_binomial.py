@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
+from datetime import date
 
 from soccer_prediction.config import load_config
 from soccer_prediction.features import compute_rates
@@ -24,20 +25,22 @@ class NegativeBinomialPredictor:
         self.dispersion = 10.0 if dispersion is None else dispersion
         self._rates = compute_rates([])
 
-    def fit(self, history: Sequence[TeamMatchStats]) -> None:
+    def fit(self, history: Sequence[TeamMatchStats], *, as_of: date | None = None) -> None:
         """Fit rates and estimate the Gamma-Poisson dispersion from observed goals."""
-        self._rates = compute_rates(history)
+        self._rates = compute_rates(history, today=as_of)
         if self._fixed_dispersion is None:
             self.dispersion = _estimate_dispersion(history)
 
-    def predict_scoreline(self, home: str, away: str) -> ScorelineGrid:
+    def predict_scoreline(self, home: str, away: str, *, neutral_venue: bool = False) -> ScorelineGrid:
         """Predict a grid with heavier tails than independent Poisson."""
-        home_mean, away_mean = expected_goals(self._rates, home, away)
+        home_mean, away_mean = expected_goals(self._rates, home, away, neutral_venue=neutral_venue)
         return negative_binomial_grid(home_mean, away_mean, self.max_goals, self.dispersion)
 
-    def predict_market(self, home: str, away: str, market: str) -> MarketPrediction:
+    def predict_market(
+        self, home: str, away: str, market: str, *, neutral_venue: bool = False
+    ) -> MarketPrediction:
         """Predict a market derived from the scoreline grid."""
-        return derive_markets(self.predict_scoreline(home, away))[market]
+        return derive_markets(self.predict_scoreline(home, away, neutral_venue=neutral_venue))[market]
 
 
 def negative_binomial_grid(
@@ -49,11 +52,16 @@ def negative_binomial_grid(
     """Build a normalized independent Negative-Binomial scoreline grid."""
     if dispersion <= 0:
         raise ValueError("dispersion must be positive")
-    home_probs = [_negative_binomial_pmf(goal, home_mean, dispersion) for goal in range(max_goals + 1)]
-    away_probs = [_negative_binomial_pmf(goal, away_mean, dispersion) for goal in range(max_goals + 1)]
+    if max_goals < 0:
+        raise ValueError("max_goals must be non-negative")
+    if max_goals == 0:
+        return ScorelineGrid(0, 0, ((1.0,),))
+    home_exact = tuple(_negative_binomial_pmf(goal, home_mean, dispersion) for goal in range(max_goals))
+    away_exact = tuple(_negative_binomial_pmf(goal, away_mean, dispersion) for goal in range(max_goals))
+    home_probs = (*home_exact, max(0.0, 1.0 - sum(home_exact)))
+    away_probs = (*away_exact, max(0.0, 1.0 - sum(away_exact)))
     rows = tuple(tuple(home_prob * away_prob for away_prob in away_probs) for home_prob in home_probs)
-    total = sum(value for row in rows for value in row)
-    return ScorelineGrid(max_goals, max_goals, tuple(tuple(value / total for value in row) for row in rows))
+    return ScorelineGrid(max_goals, max_goals, rows)
 
 
 def _negative_binomial_pmf(goals: int, mean: float, dispersion: float) -> float:

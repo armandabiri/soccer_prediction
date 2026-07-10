@@ -162,6 +162,20 @@ class ModelEstimate:
     away_win: float
     home_expected_goals: float
     away_expected_goals: float
+    ensemble_weight: float = 0.0
+    is_ensemble: bool = False
+    description: str = ""
+    over_2_5: float = 0.0
+    btts_yes: float = 0.0
+    most_likely_score: str = "0-0"
+    most_likely_score_probability: float = 0.0
+    home_win_interval: tuple[float, float] = (0.0, 1.0)
+    draw_interval: tuple[float, float] = (0.0, 1.0)
+    away_win_interval: tuple[float, float] = (0.0, 1.0)
+    is_selected: bool = False
+    role: str = "component"
+    validation_log_loss: float | None = None
+    validation_matches: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -183,6 +197,19 @@ class ScenarioAnalysis:
     model_estimates: tuple[ModelEstimate, ...] = ()
     data_uncertainty: float = 1.0
     data_quality_label: str = "low"
+    confidence_level: float = 0.80
+    home_win_interval: tuple[float, float] = (0.0, 1.0)
+    draw_interval: tuple[float, float] = (0.0, 1.0)
+    away_win_interval: tuple[float, float] = (0.0, 1.0)
+    conclusion_model_name: str = "ensemble"
+    ensemble_weights: dict[str, float] = field(default_factory=dict)
+    ensemble_validation_log_losses: dict[str, float] = field(default_factory=dict)
+    ensemble_validation_matches: int = 0
+    ensemble_validation_from: str | None = None
+    ensemble_validation_to: str | None = None
+    ensemble_weight_method: str = "static_prior"
+    selected_model_name: str = "ensemble"
+    interval_method: str = "effective-sample sensitivity range"
 
 
 @dataclass(frozen=True, slots=True)
@@ -197,6 +224,9 @@ class TeamForm:
     goals_against_per_match: float
     corners_for_per_match: float
     recent_results: tuple[str, ...] = ()
+    morale_index: float = 0.0
+    morale_label: str = "neutral"
+    result_streak: int = 0
 
 
 @dataclass(frozen=True, slots=True)

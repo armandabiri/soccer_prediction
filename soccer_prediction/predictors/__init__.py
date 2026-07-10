@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from soccer_prediction.predictors.analysis import build_scenario_analysis
+from soccer_prediction.predictors.analysis import GoalModelRun, build_goal_model_run, build_scenario_analysis
 from soccer_prediction.predictors.base import Predictor, get_model, list_models, register_model
 from soccer_prediction.predictors.bivariate_poisson import BivariatePoissonPredictor
 from soccer_prediction.predictors.cards import CardsPredictor
@@ -24,11 +24,13 @@ __all__ = [
     "DixonColesPredictor",
     "EnsemblePredictor",
     "HalfTimePredictor",
+    "GoalModelRun",
     "PoissonPredictor",
     "MonteCarloPredictor",
     "NegativeBinomialPredictor",
     "Predictor",
     "derive_markets",
+    "build_goal_model_run",
     "build_scenario_analysis",
     "get_model",
     "list_models",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
+from datetime import date
 
 from soccer_prediction.config import load_config
 from soccer_prediction.features import RateBook, compute_rates
@@ -21,30 +22,45 @@ class PoissonPredictor:
         self.max_goals = load_config().model.max_goals if max_goals is None else max_goals
         self._rates = compute_rates([])
 
-    def fit(self, history: Sequence[TeamMatchStats]) -> None:
+    def fit(self, history: Sequence[TeamMatchStats], *, as_of: date | None = None) -> None:
         """Fit team rates from match history."""
-        self._rates = compute_rates(history)
+        self._rates = compute_rates(history, today=as_of)
 
-    def predict_scoreline(self, home: str, away: str) -> ScorelineGrid:
+    def predict_scoreline(self, home: str, away: str, *, neutral_venue: bool = False) -> ScorelineGrid:
         """Predict a normalized scoreline grid."""
-        home_lambda, away_lambda = expected_goals(self._rates, home, away)
+        home_lambda, away_lambda = expected_goals(self._rates, home, away, neutral_venue=neutral_venue)
         return poisson_grid(home_lambda, away_lambda, self.max_goals)
 
-    def predict_market(self, home: str, away: str, market: str) -> MarketPrediction:
+    def predict_market(
+        self, home: str, away: str, market: str, *, neutral_venue: bool = False
+    ) -> MarketPrediction:
         """Predict a market derived from the scoreline grid."""
-        markets = derive_markets(self.predict_scoreline(home, away))
+        markets = derive_markets(self.predict_scoreline(home, away, neutral_venue=neutral_venue))
         try:
             return markets[market]
         except KeyError as exc:
             raise KeyError(f"unsupported market {market!r}") from exc
 
 
-def expected_goals(rates: RateBook, home: str, away: str) -> tuple[float, float]:
+def expected_goals(
+    rates: RateBook,
+    home: str,
+    away: str,
+    *,
+    neutral_venue: bool = False,
+) -> tuple[float, float]:
     """Estimate home and away goal expectations."""
     league_rate = max(rates.global_rates.goals_for, 0.8)
-    home_lambda = league_rate * rates.attack_for(home) * rates.defence_weakness_for(away) * 1.08
-    away_lambda = league_rate * rates.attack_for(away) * rates.defence_weakness_for(home) * 0.92
-    home_lambda, away_lambda = _blend_head_to_head(rates, home, away, home_lambda, away_lambda)
+    home_edge, away_edge = (1.0, 1.0) if neutral_venue else (1.08, 0.92)
+    home_lambda = league_rate * rates.attack_for(home) * rates.defence_weakness_for(away) * home_edge
+    away_lambda = league_rate * rates.attack_for(away) * rates.defence_weakness_for(home) * away_edge
+    home_lambda, away_lambda = _blend_head_to_head(
+        rates, home, away, home_lambda, away_lambda, neutral_venue=neutral_venue
+    )
+    morale_edge = min(1.0, max(-1.0, (rates.morale_for(home) - rates.morale_for(away)) / 2.0))
+    morale_effect = min(0.15, max(0.0, load_config().model.morale_max_effect))
+    home_lambda *= 1.0 + morale_effect * morale_edge
+    away_lambda *= 1.0 - morale_effect * morale_edge
     home_lambda = min(4.5, max(0.2, home_lambda))
     away_lambda = min(4.5, max(0.2, away_lambda))
     return home_lambda, away_lambda
@@ -56,6 +72,8 @@ def _blend_head_to_head(
     away: str,
     home_lambda: float,
     away_lambda: float,
+    *,
+    neutral_venue: bool,
 ) -> tuple[float, float]:
     home_history = rates.for_matchup(home, away)
     away_history = rates.for_matchup(away, home)
@@ -77,8 +95,9 @@ def _blend_head_to_head(
     else:
         assert home_history is not None
         direct_away = home_history.goals_against
-    direct_home *= 1.08
-    direct_away *= 0.92
+    if not neutral_venue:
+        direct_home *= 1.08
+        direct_away *= 0.92
     return (
         home_lambda * (1.0 - weight) + direct_home * weight,
         away_lambda * (1.0 - weight) + direct_away * weight,
@@ -86,12 +105,20 @@ def _blend_head_to_head(
 
 
 def poisson_grid(home_lambda: float, away_lambda: float, max_goals: int) -> ScorelineGrid:
-    """Build a normalized independent-Poisson scoreline grid."""
-    home_probs = [_poisson_pmf(goal, home_lambda) for goal in range(max_goals + 1)]
-    away_probs = [_poisson_pmf(goal, away_lambda) for goal in range(max_goals + 1)]
+    """Build a grid whose last row/column include all overflow goal counts."""
+    home_probs = _bounded_poisson_probabilities(home_lambda, max_goals)
+    away_probs = _bounded_poisson_probabilities(away_lambda, max_goals)
     rows = tuple(tuple(home_prob * away_prob for away_prob in away_probs) for home_prob in home_probs)
-    total = sum(value for row in rows for value in row)
-    return ScorelineGrid(max_goals, max_goals, tuple(tuple(value / total for value in row) for row in rows))
+    return ScorelineGrid(max_goals, max_goals, rows)
+
+
+def _bounded_poisson_probabilities(rate: float, maximum: int) -> tuple[float, ...]:
+    if maximum < 0:
+        raise ValueError("maximum goals must be non-negative")
+    if maximum == 0:
+        return (1.0,)
+    exact = tuple(_poisson_pmf(goal, rate) for goal in range(maximum))
+    return (*exact, max(0.0, 1.0 - sum(exact)))
 
 
 def poisson_tail_at_least(lam: float, threshold: int, max_count: int = 30) -> float:

@@ -49,6 +49,8 @@ class ModelConfig:
     random_seed: int = 2026
     opponent_network_depth: int = 1
     opponent_network_max_teams: int = 12
+    morale_decay_xi: float = 0.0077
+    morale_max_effect: float = 0.08
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +104,8 @@ def _apply_env(config: dict[str, Any]) -> dict[str, Any]:
         ("model", "random_seed"): os.getenv("SOCCER_PREDICTION_MODEL_RANDOM_SEED"),
         ("model", "opponent_network_depth"): os.getenv("SOCCER_PREDICTION_MODEL_OPPONENT_NETWORK_DEPTH"),
         ("model", "opponent_network_max_teams"): os.getenv("SOCCER_PREDICTION_MODEL_OPPONENT_NETWORK_MAX_TEAMS"),
+        ("model", "morale_decay_xi"): os.getenv("SOCCER_PREDICTION_MODEL_MORALE_DECAY_XI"),
+        ("model", "morale_max_effect"): os.getenv("SOCCER_PREDICTION_MODEL_MORALE_MAX_EFFECT"),
         ("rate_limits", "api_football"): os.getenv("SOCCER_PREDICTION_RATE_LIMITS_API_FOOTBALL"),
     }
     updated = dict(config)
@@ -122,7 +126,7 @@ def _apply_env(config: dict[str, Any]) -> dict[str, Any]:
             "api_football",
         }:
             section_data[key] = int(raw_value)
-        elif key == "time_decay_xi":
+        elif key in {"time_decay_xi", "morale_decay_xi", "morale_max_effect"}:
             section_data[key] = float(raw_value)
         else:
             section_data[key] = raw_value
@@ -160,6 +164,8 @@ def load_config(path: str | Path | None = None) -> AppConfig:
             random_seed=int(model_data.get("random_seed", 2026)),
             opponent_network_depth=int(model_data.get("opponent_network_depth", 1)),
             opponent_network_max_teams=int(model_data.get("opponent_network_max_teams", 12)),
+            morale_decay_xi=float(model_data.get("morale_decay_xi", 0.0077)),
+            morale_max_effect=float(model_data.get("morale_max_effect", 0.08)),
         ),
     )
 

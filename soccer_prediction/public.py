@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
 
 from soccer_prediction.config import load_config
 from soccer_prediction.datasources import DataSource, DataSourceError, PlayerSource, get_source
@@ -19,6 +20,7 @@ from soccer_prediction.predictors import (
     CardsPredictor,
     CornersPredictor,
     HalfTimePredictor,
+    build_goal_model_run,
     build_scenario_analysis,
     derive_markets,
     get_model,
@@ -37,28 +39,50 @@ def forecast_fixture(
     *,
     model: str = "ensemble",
     source: str = "auto",
+    as_of: date | None = None,
+    neutral_venue: bool = False,
 ) -> MatchForecast:
     """Forecast a fixture across scoreline, totals, BTTS, corners, cards, and per-half markets."""
     history, notes = _load_history(home, away, source)
-    goal_model = get_model(model)
-    goal_model.fit(history)
-    correct_score = goal_model.predict_scoreline(home, away)
+    forecast_date = date.today() if as_of is None else as_of
+    model_run = build_goal_model_run(
+        history,
+        home,
+        away,
+        as_of=forecast_date,
+        neutral_venue=neutral_venue,
+    )
+    if model in model_run.grids:
+        correct_score = model_run.grids[model]
+    else:
+        goal_model = get_model(model)
+        goal_model.fit(history, as_of=forecast_date)
+        correct_score = goal_model.predict_scoreline(home, away, neutral_venue=neutral_venue)
     markets = derive_markets(correct_score)
     result = _best_result(markets)
 
     half_time = HalfTimePredictor()
-    half_time.fit(history)
+    half_time.fit(history, as_of=forecast_date)
     corners = CornersPredictor()
-    corners.fit(history)
+    corners.fit(history, as_of=forecast_date)
     cards = CardsPredictor()
-    cards.fit(history)
+    cards.fit(history, as_of=forecast_date)
     per_half_prediction = half_time.predict(home, away)
-    corners_prediction = corners.predict(home, away)
-    cards_prediction = cards.predict(home, away)
-    scenario_analysis = build_scenario_analysis(history, home, away, correct_score)
+    corners_prediction = corners.predict(home, away, neutral_venue=neutral_venue)
+    cards_prediction = cards.predict(home, away, neutral_venue=neutral_venue)
+    scenario_analysis = build_scenario_analysis(
+        history,
+        home,
+        away,
+        correct_score,
+        selected_model_name=model,
+        as_of=forecast_date,
+        neutral_venue=neutral_venue,
+        model_run=model_run,
+    )
 
     return MatchForecast(
-        fixture=Fixture(home_team=home, away_team=away),
+        fixture=Fixture(home_team=home, away_team=away, kickoff=None, venue="Neutral" if neutral_venue else None),
         result=result,
         correct_score=correct_score,
         over_under=markets["over_2_5"],
@@ -79,6 +103,7 @@ def forecast_fixture(
             correct_score,
             corners_prediction,
             cards_prediction,
+            as_of=forecast_date,
         ),
     )
 
@@ -90,9 +115,18 @@ def predict_match(
     *,
     model: str = "ensemble",
     source: str = "auto",
+    as_of: date | None = None,
+    neutral_venue: bool = False,
 ) -> MarketPrediction:
     """Forecast a single market for a fixture."""
-    forecast = forecast_fixture(home, away, model=model, source=source)
+    forecast = forecast_fixture(
+        home,
+        away,
+        model=model,
+        source=source,
+        as_of=as_of,
+        neutral_venue=neutral_venue,
+    )
     if market == "result":
         return forecast.result
     if market == "over_under":

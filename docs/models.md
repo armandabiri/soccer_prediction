@@ -8,6 +8,10 @@ All goal-derived markets come from a single scoreline probability distribution s
 
 By default, forecasting loads the two target histories and the histories of up to ten of their most recent opponents. An eight-pass opponent adjustment propagates strength through paths such as A–D–F–Z: scoring against a strong defence counts more than scoring against a weak one. The graph is bounded by `opponent_network_depth` and `opponent_network_max_teams` to control API use. Direct head-to-head records receive a separate recency-weighted blend capped at 35%, so a small matchup sample cannot overwhelm broader form.
 
+### Morale and momentum proxy
+
+Recent wins, losses, goal margins, and consecutive streaks produce a bounded `[-1, 1]` morale proxy with a roughly 90-day half-life. A run of wins raises the signal while repeated losses lower it; draws break the current streak. The relative morale edge adjusts the two teams' expected goals in opposite directions, capped at 8% by default. This is deliberately a restrained form/momentum proxy—not a direct measurement of confidence, pride, dressing-room mood, injuries, or coaching psychology—and should be interpreted that way.
+
 ## Goals: robust ensemble (`ensemble`, default)
 
 The default model is a linear probability pool of Dixon-Coles (30%), Negative Binomial (25%), Bivariate Poisson (20%), and Monte Carlo scenarios (25%). Combining models with different failure modes makes the headline grid less sensitive to any single distributional assumption. The weights are normalized and every derived goal market still comes from the same final grid.
@@ -34,7 +38,7 @@ Runs 20,000 pure-Python simulations by default. Each draw includes a shared log-
 
 ## Robustness diagnostics
 
-Every `MatchForecast` compares Poisson, Dixon-Coles, Negative Binomial, Bivariate Poisson, and Monte Carlo 1X2 estimates. `scenario_analysis` reports the maximum model disagreement, normalized 1X2 entropy, recent-data uncertainty, middle-80% goal ranges, clean sheets, 0-0, five-plus-goal matches, and three-plus-goal winning margins. `matchup_context` adds recency-weighted form, direct meetings, indirect graph paths, and an inferred tempo/width/physicality style based on the goal, corner, and card models. “Model agreement” measures agreement among these assumptions; it is not a guarantee of accuracy.
+Every `MatchForecast` compares Poisson, Dixon-Coles, Negative Binomial, Bivariate Poisson, and Monte Carlo 1X2 estimates. `scenario_analysis` reports the maximum model disagreement, normalized 1X2 entropy, recent-data uncertainty, middle-80% goal ranges, clean sheets, 0-0, five-plus-goal matches, three-plus-goal winning margins, and approximate 80% confidence intervals for each 1X2 outcome. The confidence interval combines recency-weighted effective sample size with cross-model spread; it is diagnostic rather than a formally calibrated guarantee. `matchup_context` adds morale, streaks, recency-weighted form, direct meetings, indirect graph paths, and inferred game style. “Model agreement” measures agreement among these assumptions; it is not a guarantee of accuracy.
 
 ## Derived goal markets
 

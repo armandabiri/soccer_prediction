@@ -17,3 +17,5 @@ model:
   random_seed: 2026
   opponent_network_depth: 1
   opponent_network_max_teams: 12
+  morale_decay_xi: 0.0077
+  morale_max_effect: 0.08

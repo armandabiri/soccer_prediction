@@ -26,7 +26,7 @@ _SOURCE = "worldcup_2026"
 
 def forecast_wc2026(home: str = "Switzerland", away: str = "Colombia", *, model: str = "ensemble") -> MatchForecast:
     """Forecast a World Cup 2026 fixture from real openfootball results (network)."""
-    return forecast_fixture(home, away, model=model, source=_SOURCE)
+    return forecast_fixture(home, away, model=model, source=_SOURCE, neutral_venue=True)
 
 
 def write_wc2026_report(

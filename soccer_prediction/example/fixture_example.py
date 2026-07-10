@@ -184,7 +184,7 @@ def build_forecast(model: str = "ensemble", *, key: str = DEFAULT_FIXTURE, live:
     """Forecast a fixture (live real 2024-to-date data by default)."""
     spec = _spec(key)
     source = spec.live_source if live else spec.bundled_source
-    return forecast_fixture(spec.home, spec.away, model=model, source=source)
+    return forecast_fixture(spec.home, spec.away, model=model, source=source, neutral_venue=True)
 
 
 def write_reports(

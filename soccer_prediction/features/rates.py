@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from soccer_prediction.config import load_config
+from soccer_prediction.features.morale import morale_signals
 from soccer_prediction.models import TeamMatchStats, TeamRates
 
 __all__ = ["RateBook", "compute_rates", "example_usage", "main"]
@@ -25,6 +26,7 @@ class RateBook:
     matchup_effective_samples: dict[tuple[str, str], float] = field(default_factory=dict)
     corner_attack_factors: dict[str, float] = field(default_factory=dict)
     corner_concession_factors: dict[str, float] = field(default_factory=dict)
+    morale_factors: dict[str, float] = field(default_factory=dict)
 
     def for_team(self, team: str) -> TeamRates:
         """Return rates for a team or the global prior for unseen teams."""
@@ -60,6 +62,10 @@ class RateBook:
     def corner_concession_for(self, team: str) -> float:
         """Return schedule-adjusted corners conceded relative to average."""
         return self.corner_concession_factors.get(team.casefold(), 1.0)
+
+    def morale_for(self, team: str) -> float:
+        """Return the bounded recent-results morale proxy for a team."""
+        return self.morale_factors.get(team.casefold(), 0.0)
 
 
 def compute_rates(history: Sequence[TeamMatchStats], *, today: date | None = None) -> RateBook:
@@ -102,6 +108,14 @@ def compute_rates(history: Sequence[TeamMatchStats], *, today: date | None = Non
         weighted_records,
         max(global_rates.corners_for, 4.0),
     )
+    morale = {
+        team: signal[0]
+        for team, signal in morale_signals(
+            tuple(record for record, _weight in weighted_records),
+            model_config.morale_decay_xi,
+            anchor=anchor,
+        ).items()
+    }
     return RateBook(
         team_rates=team_rates,
         global_rates=global_rates,
@@ -111,6 +125,7 @@ def compute_rates(history: Sequence[TeamMatchStats], *, today: date | None = Non
         matchup_effective_samples={teams: totals["weight"] for teams, totals in totals_by_matchup.items()},
         corner_attack_factors=corner_attack,
         corner_concession_factors=corner_concession,
+        morale_factors=morale,
     )
 
 

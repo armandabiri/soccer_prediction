@@ -21,13 +21,15 @@ def context_section(forecast: MatchForecast) -> str:
         f'<td class="n">{form.effective_matches:.1f}</td><td class="n">{form.points_per_match:.2f}</td>'
         f'<td class="n">{form.goals_for_per_match:.2f}-{form.goals_against_per_match:.2f}</td>'
         f'<td class="n">{form.corners_for_per_match:.2f}</td>'
+        f'<td><span class="pill">{escape(form.morale_label)} {form.morale_index:+.2f}</span></td>'
+        f'<td class="n">{_streak(form.result_streak)}</td>'
         f"<td>{escape('; '.join(form.recent_results) or 'n/a')}</td></tr>"
         for form in (context.home_form, context.away_form)
     )
     form_header = (
         '<thead><tr><th>Team</th><th class="n">Matches</th><th class="n">Effective</th>'
         '<th class="n">Pts/match</th><th class="n">Goals F-A</th><th class="n">Corners</th>'
-        '<th>Last five</th></tr></thead>'
+        '<th>Morale proxy</th><th class="n">Streak</th><th>Last five</th></tr></thead>'
     )
     if context.head_to_head_matches:
         corners = (
@@ -53,11 +55,20 @@ def context_section(forecast: MatchForecast) -> str:
         f"{context.network_match_count} matches. <strong>Paths:</strong> {paths}</p>"
         f"<p><strong>Inferred style:</strong> {escape(context.style_label)}. "
         f"{escape(context.style_description)}</p>"
-        f'<p class="foot">Effective sample size strongly discounts older matches. Network paths adjust '
-        f"schedule strength but do not imply transitive wins.</p>"
+        f'<p class="foot">The morale value is a bounded recent-results proxy, not a direct psychological '
+        f"measurement. Effective sample size strongly discounts older matches. Network paths adjust schedule "
+        f"strength but do not imply transitive wins.</p>"
     )
     return (
         f'<h2>Form, head-to-head &amp; opponent network</h2><div class="card">'
         f'<div style="overflow-x:auto"><table>{form_header}<tbody>{form_rows}</tbody></table></div>'
         f"{evidence}</div>"
     )
+
+
+def _streak(value: int) -> str:
+    if value > 0:
+        return f"W{value}"
+    if value < 0:
+        return f"L{abs(value)}"
+    return "—"

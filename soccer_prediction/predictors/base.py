@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from datetime import date
 from typing import Protocol
 
 from soccer_prediction.models import MarketPrediction, ScorelineGrid, TeamMatchStats
@@ -13,13 +14,20 @@ __all__ = ["Predictor", "PredictorFactory", "get_model", "list_models", "registe
 class Predictor(Protocol):
     """Common model strategy interface."""
 
-    def fit(self, history: Sequence[TeamMatchStats]) -> None:
+    def fit(self, history: Sequence[TeamMatchStats], *, as_of: date | None = None) -> None:
         """Fit model state from history."""
 
-    def predict_scoreline(self, home: str, away: str) -> ScorelineGrid:
+    def predict_scoreline(self, home: str, away: str, *, neutral_venue: bool = False) -> ScorelineGrid:
         """Predict a scoreline grid."""
 
-    def predict_market(self, home: str, away: str, market: str) -> MarketPrediction:
+    def predict_market(
+        self,
+        home: str,
+        away: str,
+        market: str,
+        *,
+        neutral_venue: bool = False,
+    ) -> MarketPrediction:
         """Predict one named market."""
 
 

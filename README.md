@@ -40,7 +40,8 @@ Key features:
 - 🏆 **Extra time & penalties** — knockout advancement probability with an extra-time model and an analytical best-of-five-plus-sudden-death shootout.
 - 🔌 **Free data** — swap data sources without touching the models; bundled offline samples for zero-setup demos.
 - 🧪 **Trustworthy** — walk-forward backtesting with ranked-probability-score, log-loss, and Brier metrics.
-- 🎲 **Uncertainty-aware** — cross-model agreement, middle-80% simulated goal ranges, and probabilities for high-scoring or one-sided tail scenarios.
+- 🎲 **Uncertainty-aware** — cross-model agreement, approximate 80% result-confidence plots, simulated goal ranges, and high-scoring or one-sided tail scenarios.
+- 🧠 **Momentum-aware** — recent wins/losses, margins, and streaks feed a short-lived, capped morale proxy displayed alongside recent form.
 - 🕸️ **Opponent-aware** — recent form, direct meetings, and bounded multi-opponent paths adjust for strength of schedule instead of treating every opponent as equal.
 
 ## System Architecture
@@ -123,14 +124,14 @@ flowchart TD
 
 | Stage | Algorithm | Implementation |
 | --- | --- | --- |
-| Feature engineering | Exponential recency weighting, shrinkage, head-to-head blending, and iterative opponent-network strength adjustment | `soccer_prediction/features/rates.py::compute_rates` |
+| Feature engineering | Recency weighting, shrinkage, head-to-head blending, opponent-network adjustment, and bounded morale/momentum | `soccer_prediction/features/` |
 | Goal model (`poisson`) | Independent-Poisson outer product over home/away goal expectations | `soccer_prediction/predictors/poisson.py` |
 | Goal model (`dixon_coles`) | Poisson grid with a history-adaptive low-score draw correction | `soccer_prediction/predictors/dixon_coles.py` |
 | Goal model (`negative_binomial`) | Overdispersed goal counts with history-fitted dispersion and heavier tails | `soccer_prediction/predictors/negative_binomial.py` |
 | Goal model (`bivariate_poisson`) | Shared tempo process introduces within-match scoring correlation | `soccer_prediction/predictors/bivariate_poisson.py` |
 | Goal model (`monte_carlo`) | Reproducible cagey/open/momentum state simulations with tempo shocks | `soccer_prediction/predictors/monte_carlo.py` |
 | Goal model (`ensemble`, default) | Weighted probability pool of four complementary model families | `soccer_prediction/predictors/ensemble.py` |
-| Robustness analysis | Five-model comparison, agreement, entropy, simulated ranges and tail events | `soccer_prediction/predictors/analysis.py` |
+| Robustness analysis | Five-model comparison, confidence intervals, agreement, entropy, simulated ranges and tail events | `soccer_prediction/predictors/analysis.py` |
 | Match context | Recent form, direct meetings, A–D–F–Z-style graph paths, and inferred game style | `soccer_prediction/features/context.py` |
 | Market derivation | 1X2/over-under/BTTS/correct-score read directly off the scoreline grid — mutually consistent by construction | `soccer_prediction/predictors/markets.py::derive_markets` |
 | Per-half | Two independent Poisson models (first-half rate from HT goals, second-half rate from FT-minus-HT goals) | `soccer_prediction/predictors/half_time.py` |

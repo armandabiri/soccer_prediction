@@ -123,7 +123,7 @@ def build_scenario_analysis(
             grids[name],
             data_uncertainty,
             outcome_estimates,
-            run.ensemble_weights.get(name, 1.0 if name == "ensemble" else 0.0),
+            run.ensemble_weights.get(name, 0.0),
             selected_model_name,
             run.validation_log_losses.get(name),
             run.validation_matches,
@@ -224,7 +224,11 @@ def _model_estimate(
 
 def _best_score(grid: ScorelineGrid) -> tuple[str, float]:
     scored = (
-        (f"{home_goals}-{away_goals}", probability)
+        (
+            f"{home_goals}{'+' if home_goals == grid.home_goals_max else ''}-"
+            f"{away_goals}{'+' if away_goals == grid.away_goals_max else ''}",
+            probability,
+        )
         for home_goals, row in enumerate(grid.probabilities)
         for away_goals, probability in enumerate(row)
     )

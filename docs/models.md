@@ -14,7 +14,7 @@ Recent wins, losses, goal margins, and consecutive streaks produce a bounded `[-
 
 ## Goals: robust ensemble (`ensemble`, default)
 
-The default model is a linear probability pool of Dixon-Coles (30%), Negative Binomial (25%), Bivariate Poisson (20%), and Monte Carlo scenarios (25%). Combining models with different failure modes makes the headline grid less sensitive to any single distributional assumption. The weights are normalized and every derived goal market still comes from the same final grid.
+The default model is a linear probability pool with prior weights Dixon-Coles 35%, Negative Binomial 15%, Bivariate Poisson 30%, and Monte Carlo scenarios 20%. With at least 14 distinct fixtures, a bounded recent temporal holdout scores components by 1X2 log loss and shifts at most 45% of the prior toward the better recent fits. Smaller samples retain the documented priors. Every derived goal market comes from the same pooled grid; Poisson remains an unweighted benchmark.
 
 ## Goals: independent Poisson (`poisson`)
 
@@ -22,7 +22,7 @@ Estimates home/away goal expectations from team rates and forms the outer-produc
 
 ## Goals: Dixon-Coles (`dixon_coles`)
 
-Extends the Poisson grid with a low-score dependence correction that lifts low-scoring draw mass, then renormalizes. The correction strength adapts to the observed low-draw frequency. This remains a lightweight Dixon-Coles-inspired approximation rather than a full maximum-likelihood fit.
+Applies the standard four-cell Dixon-Coles tau correction to 0-0, 0-1, 1-0, and 1-1, then renormalizes. The dependence strength adapts to observed low-score draws. This is still a lightweight rate-based implementation rather than a joint maximum-likelihood fit of team strengths and the dependence parameter.
 
 ## Goals: Negative Binomial (`negative_binomial`)
 
@@ -38,7 +38,11 @@ Runs 20,000 pure-Python simulations by default. Each draw includes a shared log-
 
 ## Robustness diagnostics
 
-Every `MatchForecast` compares Poisson, Dixon-Coles, Negative Binomial, Bivariate Poisson, and Monte Carlo 1X2 estimates. `scenario_analysis` reports the maximum model disagreement, normalized 1X2 entropy, recent-data uncertainty, middle-80% goal ranges, clean sheets, 0-0, five-plus-goal matches, three-plus-goal winning margins, and approximate 80% confidence intervals for each 1X2 outcome. The confidence interval combines recency-weighted effective sample size with cross-model spread; it is diagnostic rather than a formally calibrated guarantee. `matchup_context` adds morale, streaks, recency-weighted form, direct meetings, indirect graph paths, and inferred game style. “Model agreement” measures agreement among these assumptions; it is not a guarantee of accuracy.
+Every `MatchForecast` reports Poisson, Dixon-Coles, Negative Binomial, Bivariate Poisson, Monte Carlo, and the ensemble conclusion. Each row includes 1X2, model goals, over 2.5, BTTS, top score, and an approximate 80% sensitivity range; the ensemble range also includes component spread. These are not formally calibrated confidence guarantees. The report adds stacked 1X2 bars, forest-style ranges, goals-market comparison, an ensemble score heatmap, and tail-scenario bars. `scenario_analysis` also reports entropy, data quality, clean sheets, 0-0, five-plus goals, and large winning margins. The component models share data and feature estimates, so agreement is useful evidence but not an independent vote or a guarantee.
+
+The score grid's final row and column are `max_goals+` overflow buckets for every goal model. This preserves tail probability consistently instead of discarding or conditionally renormalizing high scores.
+
+Set `as_of` for retrospective forecasts; matches after that date are excluded from rates, adaptive weights, form, head-to-head, and morale. Set `neutral_venue=True` for tournament fixtures at neutral grounds to remove goal, corner, and card home effects.
 
 ## Derived goal markets
 

@@ -30,8 +30,8 @@ def test_text_and_markdown_render() -> None:
     markdown = render_markdown(forecast)
     assert "### Match result (1X2)" in markdown
     assert "### Corners" in markdown
-    assert "### Robustness & random scenarios" in markdown
-    assert "Model comparison" in markdown
+    assert "### Ensemble conclusion, robustness & random scenarios" in markdown
+    assert "All goal algorithms" in markdown
     assert "Form, head-to-head & opponent network" in markdown
 
 
@@ -48,3 +48,17 @@ def test_timestamp_and_history_section() -> None:
     # the history table lists the actual teams used
     assert "Brazil" in html
     assert "| Team | Date | Opponent" in markdown
+
+
+def test_html_exposes_all_model_decision_visuals() -> None:
+    """The standalone report lets readers compare algorithms and inspect the ensemble distribution."""
+    forecast = forecast_fixture("Brazil", "Argentina", source="bundled_wc2026")
+    html = render_html(forecast)
+    for name in ("Poisson", "Dixon Coles", "Negative Binomial", "Bivariate Poisson", "Monte Carlo", "Ensemble"):
+        assert name in html
+    assert "1X2 predictions by algorithm" in html
+    assert "Approximate 80% uncertainty ranges" in html
+    assert "Goals-market sensitivity" in html
+    assert "Ensemble score distribution" in html
+    assert "Tail scenario probabilities" in html
+    assert "Scoreless draw" in html

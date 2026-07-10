@@ -80,7 +80,9 @@ def _top_score(grid: ScorelineGrid) -> str:
         for away_goals, probability in enumerate(grid_row):
             if probability > best:
                 best = probability
-                best_label = f"{home_goals}-{away_goals}"
+                home_label = f"{home_goals}{'+' if home_goals == grid.home_goals_max else ''}"
+                away_label = f"{away_goals}{'+' if away_goals == grid.away_goals_max else ''}"
+                best_label = f"{home_label}-{away_label}"
     return best_label
 
 
@@ -160,7 +162,9 @@ def _score_section(grid: ScorelineGrid) -> str:
     scored: list[tuple[str, float]] = []
     for home_goals, grid_row in enumerate(grid.probabilities):
         for away_goals, probability in enumerate(grid_row):
-            scored.append((f"{home_goals}-{away_goals}", probability))
+            home_label = f"{home_goals}{'+' if home_goals == grid.home_goals_max else ''}"
+            away_label = f"{away_goals}{'+' if away_goals == grid.away_goals_max else ''}"
+            scored.append((f"{home_label}-{away_label}", probability))
     scored.sort(key=lambda item: item[1], reverse=True)
     rows = "".join(_row(label, probability) for label, probability in scored[:6])
     return _table("Most likely correct scores", "Score", rows)

@@ -4,16 +4,19 @@ Public surface of `soccer_prediction`. Import from the top-level package or `soc
 
 ## Forecasting
 
-### `forecast_fixture(home, away, *, model="ensemble", source="auto") -> MatchForecast`
+### `forecast_fixture(home, away, *, model="ensemble", source="auto", as_of=None, neutral_venue=False) -> MatchForecast`
 
 Forecast every supported market for a fixture.
 
 - `home`, `away` (`str`): team names.
 - `model` (`str`): registered predictor — `ensemble` (default), `poisson`, `dixon_coles`, `negative_binomial`, `bivariate_poisson`, or `monte_carlo`.
 - `source` (`str`): data source — `auto` (model priors, no network), a registered adapter (`api_football`, `football_data_csv`, `worldcup_open`, `statsbomb`), or a bundled demo source (`bundled_wc2026`, `bundled_swi_col`).
-- Returns a `MatchForecast`. Raises `InsufficientHistoryError` when a non-`auto` source yields no usable history.
+- `as_of` (`datetime.date | None`): forecast anchor; later matches are excluded from rates, validation, and context.
+- `neutral_venue` (`bool`): remove goal, corner, and card home-field effects.
+- Returns a `MatchForecast`. If a configured source cannot provide usable history, the forecast records that in
+  `generated_notes` and falls back to the documented priors.
 
-### `predict_match(home, away, market, *, model="ensemble", source="auto") -> MarketPrediction`
+### `predict_match(home, away, market, *, model="ensemble", source="auto", as_of=None, neutral_venue=False) -> MarketPrediction`
 
 Return a single market: `result`, `over_under`, `btts`, or any key from `derive_markets` (`home_win`, `draw`, `away_win`, `over_2_5`, `btts_yes`, …).
 
@@ -21,9 +24,9 @@ Return a single market: `result`, `over_under`, `btts`, or any key from `derive_
 
 | Type | Key fields |
 | --- | --- |
-| `MatchForecast` | `result`, `correct_score` (`ScorelineGrid`), `over_under`, `btts`, `per_half`, `corners`, `cards`, `scenario_analysis`, `matchup_context`, `model_name`, `generated_notes` |
-| `ScenarioAnalysis` | simulation/goal ranges, 1X2 confidence intervals, tail probabilities, model/data uncertainty, `model_estimates` |
-| `ModelEstimate` | one model's 1X2 probabilities and home/away expected goals |
+| `MatchForecast` | `result`, selected `correct_score`, separate `ensemble_scoreline`, goal markets, `per_half`, `corners`, `cards`, `scenario_analysis`, `matchup_context`, `model_name` |
+| `ScenarioAnalysis` | simulation/goal ranges, approximate 1X2 sensitivity ranges, tail probabilities, all six `model_estimates`, ensemble weights and validation metadata |
+| `ModelEstimate` | one model's 1X2 probabilities/ranges, model goals, O2.5, BTTS, top score, role, weight, and optional validation loss |
 | `MatchupContext` | recent forms, direct-meeting record, opponent-network paths/coverage, and inferred game style |
 | `TeamForm` | recency-weighted effective sample, points, goals, corners, morale index/label, current streak, last-five results |
 | `PlayerStats` | career appearances/goals/assists plus optional matched `recent_*` fields covering at most 20 appearances |

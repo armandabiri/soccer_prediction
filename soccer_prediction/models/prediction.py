@@ -31,7 +31,7 @@ def _sum_probability(items: Iterable[float]) -> float:
 
 @dataclass(frozen=True, slots=True)
 class ScorelineGrid:
-    """A bounded grid of score probabilities."""
+    """A bounded grid whose terminal row and column collect max-plus tails."""
 
     home_goals_max: int
     away_goals_max: int

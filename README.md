@@ -40,7 +40,7 @@ Key features:
 - 🏆 **Extra time & penalties** — knockout advancement probability with an extra-time model and an analytical best-of-five-plus-sudden-death shootout.
 - 🔌 **Free data** — swap data sources without touching the models; bundled offline samples for zero-setup demos.
 - 🧪 **Trustworthy** — walk-forward backtesting with ranked-probability-score, log-loss, and Brier metrics.
-- 🎲 **Uncertainty-aware** — cross-model agreement, approximate 80% result-confidence plots, simulated goal ranges, and high-scoring or one-sided tail scenarios.
+- 🎲 **Uncertainty-aware** — all-model comparisons, approximate 80% sensitivity ranges, simulated goal ranges, and high-scoring or one-sided tail scenarios.
 - 🧠 **Momentum-aware** — recent wins/losses, margins, and streaks feed a short-lived, capped morale proxy displayed alongside recent form.
 - 🕸️ **Opponent-aware** — recent form, direct meetings, and bounded multi-opponent paths adjust for strength of schedule instead of treating every opponent as equal.
 
@@ -130,8 +130,8 @@ flowchart TD
 | Goal model (`negative_binomial`) | Overdispersed goal counts with history-fitted dispersion and heavier tails | `soccer_prediction/predictors/negative_binomial.py` |
 | Goal model (`bivariate_poisson`) | Shared tempo process introduces within-match scoring correlation | `soccer_prediction/predictors/bivariate_poisson.py` |
 | Goal model (`monte_carlo`) | Reproducible cagey/open/momentum state simulations with tempo shocks | `soccer_prediction/predictors/monte_carlo.py` |
-| Goal model (`ensemble`, default) | Weighted probability pool of four complementary model families | `soccer_prediction/predictors/ensemble.py` |
-| Robustness analysis | Five-model comparison, confidence intervals, agreement, entropy, simulated ranges and tail events | `soccer_prediction/predictors/analysis.py` |
+| Goal model (`ensemble`, default) | Regularized probability pool of four complementary families, with a recent temporal holdout when enough history exists | `soccer_prediction/predictors/ensemble.py` |
+| Robustness analysis | Six-row model comparison, per-model sensitivity ranges, agreement, entropy, simulated ranges and tail events | `soccer_prediction/predictors/analysis.py` |
 | Match context | Recent form, direct meetings, A–D–F–Z-style graph paths, and inferred game style | `soccer_prediction/features/context.py` |
 | Market derivation | 1X2/over-under/BTTS/correct-score read directly off the scoreline grid — mutually consistent by construction | `soccer_prediction/predictors/markets.py::derive_markets` |
 | Per-half | Two independent Poisson models (first-half rate from HT goals, second-half rate from FT-minus-HT goals) | `soccer_prediction/predictors/half_time.py` |
@@ -281,7 +281,7 @@ openfootball carries goals + half-time scores (so scoreline, 1X2, BTTS, over/und
 
 | Command | Purpose | Key options |
 | --- | --- | --- |
-| `soccer-predict predict` | Forecast a fixture | `--home`, `--away`, `--model` (`ensemble`/`dixon_coles`/`poisson`/`negative_binomial`/`bivariate_poisson`/`monte_carlo`), `--source` (`auto`/`bundled_wc2026`/…), `--format` (`text`/`json`/`md`/`html`), `--output <file>` |
+| `soccer-predict predict` | Forecast a fixture | `--home`, `--away`, `--model` (`ensemble`/`dixon_coles`/`poisson`/`negative_binomial`/`bivariate_poisson`/`monte_carlo`), `--source`, `--as-of YYYY-MM-DD`, `--neutral-venue`, `--format`, `--output <file>` |
 | `soccer-predict fetch` | Fetch team history (placeholder wiring) | `--team`, `--competition` |
 | `soccer-predict backtest` | Backtest a model (placeholder wiring) | `--competition`, `--metric` |
 
@@ -293,9 +293,9 @@ The library surface is small and typed:
 
 | Symbol | Where | Purpose |
 | --- | --- | --- |
-| `forecast_fixture(home, away, *, model="ensemble", source="auto")` | `soccer_prediction` | Forecast every supported market for a fixture; returns a `MatchForecast`. |
-| `predict_match(home, away, market, *, model="ensemble", source="auto")` | `soccer_prediction` | Forecast a single named market. |
-| `MatchForecast` | `soccer_prediction.models` | Result type: markets plus `scenario_analysis`, `knockout`, `scorers`, and `history`. |
+| `forecast_fixture(home, away, *, model="ensemble", source="auto", as_of=None, neutral_venue=False)` | `soccer_prediction` | Forecast every market; `as_of` prevents future-data leakage and `neutral_venue` removes home-field effects. |
+| `predict_match(home, away, market, *, model="ensemble", source="auto", as_of=None, neutral_venue=False)` | `soccer_prediction` | Forecast a single named market with the same date and venue controls. |
+| `MatchForecast` | `soccer_prediction.models` | Result type: selected and ensemble grids, markets, all-model `scenario_analysis`, context, scorers, and history. |
 | `DataSource`, `register_source` | `soccer_prediction.datasources` | Protocol and decorator for adding a new historical-data adapter. |
 | `Predictor`, `register_model` | `soccer_prediction.predictors` | Protocol and decorator for adding a new scoreline model. |
 

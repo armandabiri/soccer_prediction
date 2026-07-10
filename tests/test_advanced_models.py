@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import math
+from datetime import UTC, date, datetime, timedelta
+
+import pytest
+
 from soccer_prediction.models import ScorelineGrid, TeamMatchStats
 from soccer_prediction.predictors import EnsemblePredictor, MonteCarloPredictor, get_model
 from soccer_prediction.predictors.bivariate_poisson import bivariate_poisson_grid
@@ -63,8 +68,8 @@ def test_ensemble_pool_is_exact_weighted_cell_average() -> None:
         {"dixon_coles": first, "negative_binomial": second},
         {"dixon_coles": 0.25, "negative_binomial": 0.75},
     )
-    assert pooled.probabilities[0][0] == 0.175
-    assert pooled.probabilities[1][1] == 0.375
+    assert pooled.probabilities[0][0] == pytest.approx(0.175)
+    assert pooled.probabilities[1][1] == pytest.approx(0.375)
 
 
 def test_monte_carlo_scenario_mix_preserves_baseline_mean() -> None:
@@ -86,6 +91,41 @@ def test_poisson_last_bucket_contains_full_tail() -> None:
     exact_below = sum(math.exp(-1.4) * 1.4**goal / math.factorial(goal) for goal in range(4))
     home_tail = sum(grid.probabilities[4])
     assert abs(home_tail - (1.0 - exact_below)) < 1e-12
+
+
+def test_ensemble_regularizes_weights_from_temporal_holdout() -> None:
+    """Enough distinct history activates bounded, reproducible validation metadata."""
+    fetched_at = datetime.now(UTC)
+    history = [
+        TeamMatchStats(
+            "A" if index % 2 == 0 else "B",
+            "B" if index % 2 == 0 else "A",
+            date(2024, 1, 1) + timedelta(days=index * 14),
+            True,
+            2 if index % 3 else 0,
+            1 if index % 4 else 2,
+            1,
+            0,
+            5,
+            4,
+            2,
+            0,
+            "test",
+            fetched_at,
+        )
+        for index in range(20)
+    ]
+    ensemble = EnsemblePredictor()
+    ensemble.fit(history, as_of=date(2025, 1, 1))
+    assert ensemble.weight_method == "regularized_temporal_holdout"
+    assert ensemble.validation_matches >= 6
+    assert set(ensemble.validation_log_losses) == {
+        "dixon_coles",
+        "negative_binomial",
+        "bivariate_poisson",
+        "monte_carlo",
+    }
+    assert sum(ensemble.weights.values()) == pytest.approx(1.0)
 
 
 def test_every_advanced_registry_model_predicts(sample_history: list[TeamMatchStats]) -> None:

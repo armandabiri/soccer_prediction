@@ -26,6 +26,8 @@ Return a single market: `result`, `over_under`, `btts`, or any key from `derive_
 | `ModelEstimate` | one model's 1X2 probabilities and home/away expected goals |
 | `MatchupContext` | recent forms, direct-meeting record, opponent-network paths/coverage, and inferred game style |
 | `TeamForm` | recency-weighted effective sample, points, goals, corners, and last-five result labels |
+| `PlayerStats` | career appearances/goals/assists plus optional matched `recent_*` fields covering at most 20 appearances |
+| `PlayerMarketPrediction` | separate score/assist probabilities, combined and first-scorer probabilities, recent-form display metrics |
 | `ScorelineGrid` | `home_draw_away()`, `both_teams_to_score()`, `over_under(line)`, `total_probability()`, `cell_probability(h, a)` |
 | `CornersPrediction` | `home_expected`, `away_expected`, `total_expected`, `total_over_lines`, `home_minimum`, `away_minimum`, `prob_at_least` |
 | `CardsPrediction` | `yellows_expected`, `reds_expected`, `total_expected`, `over_under_lines`, `booking_points_expected` |

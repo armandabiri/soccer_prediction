@@ -47,7 +47,18 @@ def _row_to_player(row: Mapping[str, Any]) -> PlayerStats:
         appearances=int(row["appearances"]),
         goals=int(row["goals"]),
         assists=int(row["assists"]),
+        recent_appearances=_optional_int(row.get("recent_appearances")),
+        recent_goals=_optional_int(row.get("recent_goals")),
+        recent_assists=_optional_int(row.get("recent_assists")),
     )
+
+
+def _optional_int(value: object) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, int | float | str):
+        return int(value)
+    raise TypeError(f"expected an integer-compatible recent player stat, got {type(value).__name__}")
 
 
 def _row_to_stats(row: Mapping[str, Any], source: str) -> TeamMatchStats:

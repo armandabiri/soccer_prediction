@@ -36,7 +36,7 @@ Key features:
 - ⏱️ **Per-half scoring** — separate first- and second-half models for "who scores in each half".
 - 🚩 **Corners** — expected and total corners, over/under lines, and a **minimum** (10th-percentile) estimate per team.
 - 🟨 **Cards** — yellow/red expectations, booking points, and over/under card lines.
-- 🥅 **Goalscorers & assists** — per-player anytime-scorer, to-score-or-assist, and first-goalscorer markets from historical goal/assist shares.
+- 🥅 **Goalscorers & assists** — separate score/assist probabilities, combined and first-scorer markets, plus compact recent-20 production bars with an explicit aggregate-data fallback.
 - 🏆 **Extra time & penalties** — knockout advancement probability with an extra-time model and an analytical best-of-five-plus-sudden-death shootout.
 - 🔌 **Free data** — swap data sources without touching the models; bundled offline samples for zero-setup demos.
 - 🧪 **Trustworthy** — walk-forward backtesting with ranked-probability-score, log-loss, and Brier metrics.

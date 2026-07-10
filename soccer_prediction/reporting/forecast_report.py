@@ -54,14 +54,24 @@ def _scorers_table_md(forecast: MatchForecast) -> list[str]:
     rows = [
         "### Goalscorers & assists",
         "",
-        "| Player | Team | Pos | Anytime | Score/assist | First |",
-        "| --- | --- | :-: | :-: | :-: | :-: |",
+        "| Player | Team | Pos | Recent (max 20) | Score | Assist | Score/assist | First |",
+        "| --- | --- | :-: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for player in scorers.players[:12]:
         rows.append(
-            f"| {player.player} | {player.team} | {player.position} | {player.anytime_scorer:.0%} "
-            f"| {player.to_score_or_assist:.0%} | {player.first_scorer:.0%} |"
+            f"| {player.player} | {player.team} | {player.position} "
+            f"| {player.recent_goals:g}G/{player.recent_assists:g}A in {player.recent_appearances}"
+            f"{'*' if player.recent_form_estimated else ''} | {player.score_probability:.0%} "
+            f"| {player.assist_probability:.0%} | {player.to_score_or_assist:.0%} "
+            f"| {player.first_scorer:.0%} |"
         )
+    rows.extend(
+        [
+            "",
+            "_* Recent form is an up-to-20 equivalent estimated from aggregate totals when match-level recent data "
+            "is unavailable._",
+        ]
+    )
     return rows
 
 
@@ -225,8 +235,11 @@ def render_text(forecast: MatchForecast, *, generated_at: datetime | None = None
         lines.append(f"Extra time: {knockout.goes_to_extra_time:.0%}, penalties: {knockout.goes_to_penalties:.0%}")
     if forecast.scorers and forecast.scorers.players:
         top = forecast.scorers.players[:3]
-        names = ", ".join(f"{player.player} {player.anytime_scorer:.0%}" for player in top)
-        lines.append(f"Top scorers (anytime): {names}")
+        names = ", ".join(
+            f"{player.player} score {player.score_probability:.0%} / assist {player.assist_probability:.0%}"
+            for player in top
+        )
+        lines.append(f"Top player markets: {names}")
     if forecast.generated_notes:
         lines.append("Notes: " + "; ".join(forecast.generated_notes))
     return "\n".join(lines)

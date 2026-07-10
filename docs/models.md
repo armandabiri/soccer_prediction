@@ -48,6 +48,10 @@ Per-team corner expectations from corner-for × opponent corner-against rates. W
 
 Poisson count model on team disciplinary rates with a home-advantage factor (home teams get fewer cards) and an optional referee-strictness multiplier. Produces yellow/red expectations, booking points, and over/under card lines. Cards are under-dispersed, so COM-Poisson is the accuracy upgrade.
 
+## Player scoring and assists
+
+Player goal and assist allocation uses per-appearance production rather than raw career totals, with position-specific empirical priors to stabilize small samples. When a player source supplies `recent_appearances`, `recent_goals`, and `recent_assists` for up to 20 games, recent form receives a bounded 55% blend; otherwise reports clearly mark an up-to-20 equivalent estimated from aggregate totals. The model exposes separate score, assist, score-or-assist, and first-scorer probabilities. Expected assists are limited to a 72% assisted-goal share so assist markets do not assume every goal has a credited assist. These estimates still assume participation and are not lineup/minutes-aware.
+
 ## Per-half scoring
 
 Two independent Poisson models — first-half rates from half-time goals, second-half rates from full-minus-half goals — giving the probability each team scores in each half and the likeliest half-time result. This independent-halves approach is practitioner-grade, not a canonical academic method; treat per-half figures as estimates.

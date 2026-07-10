@@ -33,6 +33,9 @@ th { color:var(--muted); font-weight:600; font-size:.82rem; }
 td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .bar { position:relative; height:8px; border-radius:6px; background:var(--bar); overflow:hidden; min-width:80px; }
 .bar > span { position:absolute; inset:0 auto 0 0; background:var(--accent2); border-radius:6px; }
+.formbar { position:relative; height:7px; min-width:120px; border-radius:6px; background:var(--bar); overflow:hidden; }
+.formbar > span { position:absolute; inset:0 auto 0 0; border-radius:6px; }
+.formlabel { display:block; margin-top:4px; color:var(--muted); font-size:.75rem; white-space:nowrap; }
 .foot { color:var(--muted); font-size:.82rem; margin-top:24px; }
 .pill { display:inline-block; background:var(--bar); border-radius:999px; padding:2px 10px; font-size:.8rem; }
 .dot { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:7px;
@@ -81,22 +84,39 @@ def _scorers_section(forecast: MatchForecast) -> str:
     rows: list[str] = []
     for player in scorers.players[:12]:
         color = _team_color(player.team)
+        appearances = player.recent_appearances
+        goal_rate = player.recent_goals / appearances if appearances else 0.0
+        form_width = min(100.0, goal_rate * 100.0)
+        estimate_marker = "*" if player.recent_form_estimated else ""
+        form_label = (
+            f"{player.recent_goals:g}G · {player.recent_assists:g}A / {appearances}{estimate_marker}"
+            if appearances
+            else "n/a"
+        )
         rows.append(
             f'<tr style="background:{color}22"><td>{escape(player.player)}</td>'
             f"<td>{_dot(color)}{escape(player.team)}</td>"
-            f'<td class="n">{escape(player.position)}</td><td class="n">{_pct(player.anytime_scorer)}</td>'
+            f'<td class="n">{escape(player.position)}</td>'
+            f'<td><div class="formbar" title="Goals per appearance over the latest available sample">'
+            f'<span style="width:{form_width:.1f}%;background:{color}"></span></div>'
+            f'<span class="formlabel">{form_label}</span></td>'
+            f'<td class="n">{_pct(player.score_probability)}</td>'
+            f'<td class="n">{_pct(player.assist_probability)}</td>'
             f'<td class="n">{_pct(player.to_score_or_assist)}</td>'
             f'<td class="n">{_pct(player.first_scorer)}</td></tr>'
         )
     header = (
-        '<thead><tr><th>Player</th><th>Team</th><th class="n">Pos</th><th class="n">Anytime</th>'
-        '<th class="n">Score/assist</th><th class="n">First</th></tr></thead>'
+        '<thead><tr><th>Player</th><th>Team</th><th class="n">Pos</th><th>Recent scoring (max 20)</th>'
+        '<th class="n">Score</th><th class="n">Assist</th><th class="n">Score/assist</th>'
+        '<th class="n">First</th></tr></thead>'
     )
     return (
         f'<h2>Goalscorers &amp; assists</h2><div class="card"><div style="overflow-x:auto">'
         f'<table>{header}<tbody>{"".join(rows)}</tbody></table></div><p class="foot">'
-        f"Anytime = to score anytime; Score/assist = to score or assist; First = to open the scoring. "
-        f"Share-based estimates from historical goal/assist involvement.</p></div>"
+        f"Score and Assist are separate anytime probabilities; Score/assist is either event; First is to open "
+        f"the scoring. The bar is goals per appearance over up to 20 recent games. * means an up-to-20 equivalent "
+        f"estimated from aggregate career totals because the source has no match-level recent form. Probabilities "
+        f"use position-shrunk per-appearance rates and assume the player participates.</p></div>"
     )
 
 

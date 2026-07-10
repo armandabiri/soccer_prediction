@@ -5,8 +5,10 @@ from __future__ import annotations
 from soccer_prediction.models import ScorelineGrid, TeamMatchStats
 from soccer_prediction.predictors import EnsemblePredictor, MonteCarloPredictor, get_model
 from soccer_prediction.predictors.bivariate_poisson import bivariate_poisson_grid
+from soccer_prediction.predictors.ensemble import pool_scoreline_grids
 from soccer_prediction.predictors.negative_binomial import negative_binomial_grid
 from soccer_prediction.predictors.poisson import poisson_grid
+from soccer_prediction.predictors.scorers import expected_goals_from_grid
 
 
 def _five_plus_probability(grid: ScorelineGrid) -> float:
@@ -51,6 +53,39 @@ def test_ensemble_is_normalized(sample_history: list[TeamMatchStats]) -> None:
     model.fit(sample_history)
     grid = model.predict_scoreline("Brazil", "Argentina")
     assert round(grid.total_probability(), 8) == 1.0
+
+
+def test_ensemble_pool_is_exact_weighted_cell_average() -> None:
+    """The conclusion is one linear pool, not a vote or second model run."""
+    first = ScorelineGrid(1, 1, ((0.4, 0.1), (0.2, 0.3)))
+    second = ScorelineGrid(1, 1, ((0.1, 0.2), (0.3, 0.4)))
+    pooled = pool_scoreline_grids(
+        {"dixon_coles": first, "negative_binomial": second},
+        {"dixon_coles": 0.25, "negative_binomial": 0.75},
+    )
+    assert pooled.probabilities[0][0] == 0.175
+    assert pooled.probabilities[1][1] == 0.375
+
+
+def test_monte_carlo_scenario_mix_preserves_baseline_mean() -> None:
+    """Random match states widen outcomes without silently increasing expected goals."""
+    poisson = get_model("poisson")
+    poisson.fit([])
+    baseline = poisson.predict_scoreline("A", "B", neutral_venue=True)
+    simulation = MonteCarloPredictor(simulations=50_000, seed=31)
+    simulation.fit([])
+    simulated = simulation.predict_scoreline("A", "B", neutral_venue=True)
+    baseline_total = sum(expected_goals_from_grid(baseline))
+    simulated_total = sum(expected_goals_from_grid(simulated))
+    assert abs(simulated_total - baseline_total) < 0.08
+
+
+def test_poisson_last_bucket_contains_full_tail() -> None:
+    """The terminal score bucket means max-plus and no probability mass is discarded."""
+    grid = poisson_grid(1.4, 1.1, 4)
+    exact_below = sum(math.exp(-1.4) * 1.4**goal / math.factorial(goal) for goal in range(4))
+    home_tail = sum(grid.probabilities[4])
+    assert abs(home_tail - (1.0 - exact_below)) < 1e-12
 
 
 def test_every_advanced_registry_model_predicts(sample_history: list[TeamMatchStats]) -> None:

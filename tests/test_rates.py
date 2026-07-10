@@ -26,3 +26,17 @@ def test_unseen_team_uses_prior() -> None:
     """An unseen team falls back to the global prior rather than raising."""
     rates = compute_rates([]).for_team("Nowhere")
     assert rates.goals_for > 1.0
+
+
+def test_as_of_excludes_future_records() -> None:
+    """Retrospective rates cannot see matches after the forecast anchor."""
+    fetched_at = datetime.now(UTC)
+    past = TeamMatchStats(
+        "A", "B", date(2024, 1, 1), True, 1, 0, 0, 0, 3, 2, 1, 0, "test", fetched_at
+    )
+    future = TeamMatchStats(
+        "A", "B", date(2026, 1, 1), True, 9, 0, 4, 0, 12, 1, 0, 0, "test", fetched_at
+    )
+    with_future = compute_rates([past, future], today=date(2025, 1, 1)).for_team("A")
+    past_only = compute_rates([past], today=date(2025, 1, 1)).for_team("A")
+    assert with_future == past_only

@@ -12,6 +12,7 @@ include corners or cards, so those fall back to model priors (use
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 from soccer_prediction.models import MatchForecast
@@ -35,14 +36,16 @@ def write_wc2026_report(
 ) -> dict[str, Path]:
     """Write HTML and Markdown reports for a real World Cup 2026 fixture."""
     forecast = forecast_wc2026(home, away)
+    generated_at = datetime.now(UTC)
+    stamp = generated_at.strftime("%Y-%m-%d_%H-%M-%S")
     out = Path("reports") if output_dir is None else Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     slug = f"wc2026_{home}_{away}".lower().replace(" ", "_")
     title = f"{home} vs {away} - World Cup 2026 (real results)"
-    html_path = out / f"{slug}.html"
-    md_path = out / f"{slug}.md"
-    html_path.write_text(render_html(forecast, title=title), encoding="utf-8")
-    md_path.write_text(f"# {title}\n\n{render_markdown(forecast)}\n", encoding="utf-8")
+    html_path = out / f"{slug}_{stamp}.html"
+    md_path = out / f"{slug}_{stamp}.md"
+    html_path.write_text(render_html(forecast, title=title, generated_at=generated_at), encoding="utf-8")
+    md_path.write_text(f"# {title}\n\n{render_markdown(forecast, generated_at=generated_at)}\n", encoding="utf-8")
     return {"html": html_path, "md": md_path}
 
 

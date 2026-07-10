@@ -1,0 +1,23 @@
+[
+  {"name": "Lamine Yamal", "team": "Spain", "position": "FW", "appearances": 14, "goals": 3, "assists": 8},
+  {"name": "Nico Williams", "team": "Spain", "position": "FW", "appearances": 20, "goals": 4, "assists": 5},
+  {"name": "Dani Olmo", "team": "Spain", "position": "MF", "appearances": 39, "goals": 11, "assists": 9},
+  {"name": "Fabian Ruiz", "team": "Spain", "position": "MF", "appearances": 29, "goals": 4, "assists": 7},
+  {"name": "Alvaro Morata", "team": "Spain", "position": "FW", "appearances": 80, "goals": 36, "assists": 4},
+  {"name": "Rodri", "team": "Spain", "position": "MF", "appearances": 56, "goals": 4, "assists": 3},
+  {"name": "Carvajal", "team": "Spain", "position": "DF", "appearances": 49, "goals": 1, "assists": 5},
+  {"name": "Robin Le Normand", "team": "Spain", "position": "DF", "appearances": 17, "goals": 1, "assists": 0},
+  {"name": "Aymeric Laporte", "team": "Spain", "position": "DF", "appearances": 35, "goals": 1, "assists": 0},
+  {"name": "Marc Cucurella", "team": "Spain", "position": "DF", "appearances": 10, "goals": 0, "assists": 2},
+
+  {"name": "Romelu Lukaku", "team": "Belgium", "position": "FW", "appearances": 119, "goals": 85, "assists": 18},
+  {"name": "Kevin De Bruyne", "team": "Belgium", "position": "MF", "appearances": 105, "goals": 28, "assists": 49},
+  {"name": "Leandro Trossard", "team": "Belgium", "position": "FW", "appearances": 38, "goals": 9, "assists": 4},
+  {"name": "Jeremy Doku", "team": "Belgium", "position": "FW", "appearances": 26, "goals": 2, "assists": 7},
+  {"name": "Lois Openda", "team": "Belgium", "position": "FW", "appearances": 24, "goals": 2, "assists": 2},
+  {"name": "Youri Tielemans", "team": "Belgium", "position": "MF", "appearances": 70, "goals": 8, "assists": 10},
+  {"name": "Amadou Onana", "team": "Belgium", "position": "MF", "appearances": 17, "goals": 0, "assists": 1},
+  {"name": "Wout Faes", "team": "Belgium", "position": "DF", "appearances": 21, "goals": 0, "assists": 0},
+  {"name": "Jan Vertonghen", "team": "Belgium", "position": "DF", "appearances": 157, "goals": 10, "assists": 6},
+  {"name": "Timothy Castagne", "team": "Belgium", "position": "DF", "appearances": 47, "goals": 2, "assists": 4}
+]

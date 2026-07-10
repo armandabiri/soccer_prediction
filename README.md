@@ -11,15 +11,21 @@ Forecast soccer matches — with the **FIFA World Cup 2026** as the headline use
 
 - [Overview](#overview)
 - [System Architecture](#system-architecture)
+- [Prediction Pipeline](#prediction-pipeline)
+- [Package Layout](#package-layout)
 - [Getting Started](#getting-started)
 - [Quick Start](#quick-start)
 - [Example: Switzerland vs Colombia](#example-switzerland-vs-colombia)
 - [CLI Reference](#cli-reference)
+- [Public API Reference](#public-api-reference)
 - [Data Sources](#data-sources)
 - [Prediction Models](#prediction-models)
+- [Prediction Packages](#prediction-packages)
 - [Configuration](#configuration)
+- [Logging and Security](#logging-and-security)
 - [Testing and Quality Gates](#testing-and-quality-gates)
 - [Version History](#version-history)
+- [Packaging and Release](#packaging-and-release)
 - [License](#license)
 
 ## Overview
@@ -30,6 +36,8 @@ Key features:
 - ⏱️ **Per-half scoring** — separate first- and second-half models for "who scores in each half".
 - 🚩 **Corners** — expected and total corners, over/under lines, and a **minimum** (10th-percentile) estimate per team.
 - 🟨 **Cards** — yellow/red expectations, booking points, and over/under card lines.
+- 🥅 **Goalscorers & assists** — per-player anytime-scorer, to-score-or-assist, and first-goalscorer markets from historical goal/assist shares.
+- 🏆 **Extra time & penalties** — knockout advancement probability with an extra-time model and an analytical best-of-five-plus-sudden-death shootout.
 - 🔌 **Free data** — swap data sources without touching the models; bundled offline samples for zero-setup demos.
 - 🧪 **Trustworthy** — walk-forward backtesting with ranked-probability-score, log-loss, and Brier metrics.
 
@@ -56,9 +64,95 @@ flowchart LR
   F --> O[Reports: text / JSON / Markdown / HTML]
 ```
 
+## Prediction Pipeline
+
+Every forecast runs through the same algorithm chain regardless of data source. All of it — the goal-rate model, the corner/card count models, the knockout shootout model, and the goalscorer attribution — is computed here, in pure Python; nothing is delegated to an external statistics package.
+
+```mermaid
+flowchart TD
+  H[TeamMatchStats history] --> R[[compute_rates]]
+
+  subgraph FE["Feature engineering"]
+    R
+  end
+
+  subgraph GM["Goal model &rarr; ScorelineGrid"]
+    direction TB
+    G{"model="}
+    G -->|"poisson"| P1[PoissonPredictor]
+    G -->|"dixon_coles (default)"| P2[DixonColesPredictor]
+    P1 --> SG[[ScorelineGrid]]
+    P2 --> SG
+    SG --> MK[derive_markets]
+  end
+
+  subgraph MP["Market-specific predictors"]
+    direction TB
+    HT[HalfTimePredictor]
+    CO[CornersPredictor]
+    CD[CardsPredictor]
+    KO[predict_knockout]
+    SC[predict_scorers]
+  end
+
+  R --> G
+  R --> HT
+  R --> CO
+  R --> CD
+  SG --> KO
+  SG --> SC
+
+  MK --> MF[[MatchForecast]]
+  HT --> MF
+  CO --> MF
+  CD --> MF
+  KO --> MF
+  SC --> MF
+  MF --> RPT[text / JSON / Markdown / HTML]
+```
+
+| Stage | Algorithm | Implementation |
+| --- | --- | --- |
+| Feature engineering | Exponential recency weighting + shrinkage-to-prior for small samples | `soccer_prediction/features/rates.py::compute_rates` |
+| Goal model (`poisson`) | Independent-Poisson outer product over home/away goal expectations | `soccer_prediction/predictors/poisson.py` |
+| Goal model (`dixon_coles`, default) | Poisson grid with a low-score dependence correction (lifts 0-0/1-1/1-0/0-1 mass), falling back to `poisson` if degenerate | `soccer_prediction/predictors/dixon_coles.py` |
+| Market derivation | 1X2/over-under/BTTS/correct-score read directly off the scoreline grid — mutually consistent by construction | `soccer_prediction/predictors/markets.py::derive_markets` |
+| Per-half | Two independent Poisson models (first-half rate from HT goals, second-half rate from FT-minus-HT goals) | `soccer_prediction/predictors/half_time.py` |
+| Corners | Count model on corner-for/against rates; league-average prior fallback when the source has no corner data; minimum = 10th-percentile floor of the fitted distribution | `soccer_prediction/predictors/corners.py` |
+| Cards | Poisson count model with a home-advantage discount and an optional referee-strictness multiplier | `soccer_prediction/predictors/cards.py` |
+| Knockout (extra time + penalties) | Fatigue-scaled extra-time Poisson, then an analytical best-of-five-plus-sudden-death shootout from each side's penalty-conversion rate | `soccer_prediction/predictors/knockout.py` |
+| Goalscorers/assists | Team expected-goals split across the squad by historical goal/assist share | `soccer_prediction/predictors/scorers.py` |
+| Backtesting | Walk-forward validation (train strictly before each test match) scored with RPS, log-loss, Brier | `soccer_prediction/calibration/backtest.py`, `metrics.py` |
+
+See [Prediction Packages](#prediction-packages) below for exactly which libraries back each stage, and [docs/models.md](docs/models.md) for the statistical detail and known limitations of each model.
+
+## Package Layout
+
+```text
+soccer_prediction/
+  __init__.py        # top-level facade: forecast_fixture, predict_match, __version__
+  __main__.py         # `python -m soccer_prediction` entry point
+  public.py            # forecast_fixture / predict_match orchestration
+  version.py             # installed-metadata version lookup
+  datasources/            # DataSource protocol + adapters (API-Football, StatsBomb, football-data.co.uk, openfootball, martj42) + cache
+  ingest/                  # record normalization and validation
+  features/                 # team rate computation (recency-weighted, shrunk)
+  predictors/                 # Predictor protocol + Poisson/Dixon-Coles/corners/cards/half-time/knockout/scorers models
+  models/                        # typed dataclasses: matches, teams, players, predictions
+  calibration/                     # walk-forward backtesting + RPS/log-loss/Brier metrics
+  cli/                                # Typer app: predict, fetch, backtest
+  config/                              # AppConfig loader + defaults.yaml
+  reporting/                             # text/JSON/Markdown/HTML forecast renderers
+  example/                                 # offline worked examples + bundled sample data
+tests/                                       # pytest suite (one module per adapter/predictor/surface)
+docs/                                          # api.md, data-sources.md, models.md
+```
+
+Everything under `soccer_prediction/` is importable; `tests/` and `docs/` are developer- and reader-facing only.
+
 ## Getting Started
 
-Requires Python 3.11+.
+Requires Python 3.11+, cross-platform (Windows, macOS, Linux).
 
 ```powershell
 py -m venv .venv
@@ -104,7 +198,7 @@ The `soccer_prediction.example` package ships offline, illustrative history for 
 ```python
 from soccer_prediction.example import run_switzerland_colombia, write_reports, build_forecast
 
-# Print a text forecast and write reports/switzerland_colombia.{html,md}
+# Print a text forecast and write reports/switzerland_colombia_<timestamp>.{html,md}
 run_switzerland_colombia()
 
 # Or get the typed forecast and inspect any market
@@ -121,7 +215,7 @@ print(paths["html"], paths["md"])
 From a clean checkout (no install needed):
 
 ```bash
-python -c "from soccer_prediction.example.switzerland_colombia_example import run_example; run_example()"
+python -c "from soccer_prediction.example.fixture_example import run_example; run_example()"
 ```
 
 Or straight from the CLI, writing a styled HTML report:
@@ -131,6 +225,23 @@ soccer-predict predict --home Switzerland --away Colombia --source bundled_swi_c
 ```
 
 The bundled history is illustrative sample data for offline demos. In production the same models run on real data pulled from the free sources below.
+
+### Other competing team pairs
+
+`soccer_prediction/example/fixture_example.py` defines every runnable pair in one constant registry, `FIXTURES: dict[str, FixtureSpec]`, so adding a new fixture never duplicates the loading/registration code:
+
+```python
+from soccer_prediction.example.fixture_example import FIXTURES, build_forecast, run_example
+
+print(list(FIXTURES))   # ['switzerland_colombia', 'france_morocco', 'argentina_egypt']
+
+# Any registered fixture works the same way, selected by key:
+run_example(key="france_morocco")
+run_example(key="argentina_egypt")
+forecast = build_forecast(key="argentina_egypt", live=False)   # offline, bundled sample
+```
+
+Each entry in `FIXTURES` owns its own bundled sample data and its own registered data-source names, so fixtures never collide with one another.
 
 ### Real World Cup 2026 results
 
@@ -144,7 +255,7 @@ print(f.result.selection, f"{f.result.probability:.1%}")
 for r in f.history:                               # the real matches used
     print(r.date, r.team, f"{r.goals_for}-{r.goals_against}", "vs", r.opponent)
 
-write_wc2026_report("Switzerland", "Colombia")    # reports/wc2026_switzerland_colombia.{html,md}
+write_wc2026_report("Switzerland", "Colombia")    # reports/wc2026_switzerland_colombia_<timestamp>.{html,md}
 ```
 
 openfootball carries goals + half-time scores (so scoreline, 1X2, BTTS, over/under, and per-half markets use real data) but **no corners or cards** — use `source="api_football"` (free key) for those.
@@ -157,7 +268,21 @@ openfootball carries goals + half-time scores (so scoreline, 1X2, BTTS, over/und
 | `soccer-predict fetch` | Fetch team history (placeholder wiring) | `--team`, `--competition` |
 | `soccer-predict backtest` | Backtest a model (placeholder wiring) | `--competition`, `--metric` |
 
-Exit code `0` on success. Run `soccer-predict --help` for the full surface.
+Exit code `0` on success. An unhandled error (for example, a data source with no usable history) surfaces as a Python traceback with Typer/Click's default non-zero exit code; no command defines a custom exit-code contract beyond that. Run `soccer-predict --help` for the full surface.
+
+## Public API Reference
+
+The library surface is small and typed:
+
+| Symbol | Where | Purpose |
+| --- | --- | --- |
+| `forecast_fixture(home, away, *, model="dixon_coles", source="auto")` | `soccer_prediction` | Forecast every supported market for a fixture; returns a `MatchForecast`. |
+| `predict_match(home, away, market, *, model="dixon_coles", source="auto")` | `soccer_prediction` | Forecast a single named market. |
+| `MatchForecast` | `soccer_prediction.models` | Result type: `result`, `correct_score`, `over_under`, `btts`, `per_half`, `corners`, `cards`, `knockout`, `scorers`, `history`. |
+| `DataSource`, `register_source` | `soccer_prediction.datasources` | Protocol and decorator for adding a new historical-data adapter. |
+| `Predictor`, `register_model` | `soccer_prediction.predictors` | Protocol and decorator for adding a new scoreline model. |
+
+Full field-level reference: [docs/api.md](docs/api.md).
 
 ## Data Sources
 
@@ -174,6 +299,26 @@ All are free; see [docs/data-sources.md](docs/data-sources.md) for auth, coverag
 
 See [docs/models.md](docs/models.md). Goal markets come from a single scoreline distribution (independent Poisson, or Dixon-Coles with a low-score correction). Corners use a low-quantile "minimum" plus over/under tails; cards use a Poisson count model; per-half uses two independent half models.
 
+## Prediction Packages
+
+**All prediction math ships as pure Python, using only the standard library.** No numpy, scipy, pandas, statsmodels, or penaltyblog is imported anywhere in `soccer_prediction/predictors/`, `features/`, or `calibration/` — this was a deliberate choice for a small, portable, fast-installing package, not an oversight.
+
+| What | Package | Where |
+| --- | --- | --- |
+| Poisson PMF (goal, per-half, card, extra-time models) | stdlib `math` (`math.exp`, `math.factorial`) | `soccer_prediction/predictors/poisson.py::_poisson_pmf` |
+| Penalty-shootout binomial/combinatorics | stdlib `math` (`math.comb`) | `soccer_prediction/predictors/knockout.py::shootout_win_probability` |
+| Log-loss / ranked probability score | stdlib `math` (`math.log`) | `soccer_prediction/calibration/metrics.py` |
+| HTTP fetching for every data-source adapter | stdlib `urllib.request` | `soccer_prediction/datasources/{cache,football_data_csv,international_results,worldcup_open}.py` |
+| CLI | [`typer`](https://typer.tiangolo.com/) | `soccer_prediction/cli/` |
+| Config parsing | [`pyyaml`](https://pyyaml.org/) | `soccer_prediction/config/loader.py` |
+
+The optional `[accel]` extra (`numpy`, `scipy`, `pandas`, `statsmodels`, `penaltyblog`, `statsbombpy`, `requests`) is **not required by anything currently shipped**, with one exception: `statsbombpy` is dynamically imported by the StatsBomb data-source adapter (`soccer_prediction/datasources/statsbomb.py`) to fetch open event data — it is a data-fetching dependency, not a modeling one. The rest of `[accel]` documents a **future upgrade path**, not current behavior:
+
+- `penaltyblog` — a full maximum-likelihood Dixon-Coles fit could replace the current closed-form low-score correction (see [docs/models.md](docs/models.md#goals-dixon-coles-dixon_coles-default)).
+- `statsmodels` / `scipy` — Negative-Binomial (corners are overdispersed) and COM-Poisson (cards are underdispersed) would improve on the current plain-Poisson count models.
+- `numpy` / `pandas` — would matter only if a future model needed vectorized fitting over large histories; today's per-fixture rate computation has no such bottleneck.
+- `requests` is listed but unused; every adapter uses `urllib.request` from the standard library instead.
+
 ## Configuration
 
 Defaults live in `soccer_prediction/config/defaults.yaml` and are overridable by environment variables. Full table in [docs/api.md](docs/api.md).
@@ -184,7 +329,14 @@ Defaults live in `soccer_prediction/config/defaults.yaml` and are overridable by
 | `SOCCER_PREDICTION_CACHE_DIR` | On-disk cache directory | `.cache/soccer_prediction` |
 | `SOCCER_PREDICTION_MODEL_MAX_GOALS` | Scoreline grid size | `8` |
 
+## Logging and Security
+
+- **Logging** — internal modules (data sources, ingestion, the public facade, the Dixon-Coles fallback) log via the standard library `logging` module through module-level `logging.getLogger(__name__)` loggers with lazy `%`-style formatting; no secret values are logged. The CLI and example scripts print human-readable output directly (`typer.echo`/`print`) rather than logging, since they are user-facing surfaces, not library internals.
+- **Secrets** — `SOCCER_PREDICTION_API_FOOTBALL_KEY` (and any future API credential) is read from the environment only; it is never written to `pyproject.toml`, `defaults.yaml`, source, or a log line. Do not commit a `.env` file containing a real key.
+
 ## Testing and Quality Gates
+
+The suite is unit-level — one module per data-source adapter, predictor, and surface (CLI, public API, reporting) — with shared fixtures in `tests/conftest.py`.
 
 ```bash
 python -m pytest --cov=soccer_prediction
@@ -199,6 +351,13 @@ python -m build
 | Version | Date | Changes |
 | --- | --- | --- |
 | 0.1.0 | 2026-07-07 | Initial release: free-data ingestion, Poisson/Dixon-Coles goals, corners (total + minimum), cards, per-half, backtesting, CLI, HTML/MD reports, offline examples. |
+
+## Packaging and Release
+
+- **Version source** — `soccer_prediction/version.py` reads the installed distribution version via `importlib.metadata`, falling back to `0.1.0` when the package is not installed.
+- **Build** — `python -m build` produces a wheel and sdist under `dist/`.
+- **Changelog** — [CHANGELOG.md](CHANGELOG.md); this project follows [Semantic Versioning](https://semver.org/).
+- **Tag format** — `v<version>` (for example `v0.1.0`), per the release links in `CHANGELOG.md`.
 
 ## License
 

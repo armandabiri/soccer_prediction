@@ -19,6 +19,7 @@ from soccer_prediction.predictors import (
     HalfTimePredictor,
     derive_markets,
     get_model,
+    predict_knockout,
     predict_scorers,
 )
 
@@ -62,6 +63,7 @@ def forecast_fixture(
         generated_notes=tuple(notes),
         history=tuple(history),
         scorers=_load_scorers(source, home, away, correct_score),
+        knockout=predict_knockout(correct_score),
     )
 
 

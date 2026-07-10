@@ -62,6 +62,26 @@ def _scorers_table_md(forecast: MatchForecast) -> list[str]:
     return rows
 
 
+def _knockout_md(forecast: MatchForecast) -> list[str]:
+    knockout = forecast.knockout
+    if knockout is None:
+        return []
+    home, away = forecast.fixture.home_team, forecast.fixture.away_team
+    return [
+        "### Extra time & penalties",
+        "",
+        f"- {home} to advance: {knockout.home_advance:.1%}",
+        f"- {away} to advance: {knockout.away_advance:.1%}",
+        f"- Goes to extra time: {knockout.goes_to_extra_time:.1%}",
+        f"- Goes to penalties: {knockout.goes_to_penalties:.1%}",
+        f"- Settled in: normal time {knockout.decided_in_normal_time:.0%}, "
+        f"extra time {knockout.decided_in_extra_time:.0%}, penalties {knockout.goes_to_penalties:.0%}",
+        f"- Shootout: {home} {knockout.home_shootout_win:.0%} vs {away} {knockout.away_shootout_win:.0%} "
+        f"(penalty conversion {knockout.home_penalty_conversion:.0%} / {knockout.away_penalty_conversion:.0%})",
+        "",
+    ]
+
+
 def render_text(forecast: MatchForecast, *, generated_at: datetime | None = None) -> str:
     """Render a forecast as readable text."""
     fixture = forecast.fixture
@@ -80,6 +100,11 @@ def render_text(forecast: MatchForecast, *, generated_at: datetime | None = None
         f"Half-time: {half.selection if half else 'n/a'}",
         _history_summary(forecast),
     ]
+    if forecast.knockout is not None:
+        knockout = forecast.knockout
+        home_team, away_team = fixture.home_team, fixture.away_team
+        lines.append(f"Advance: {home_team} {knockout.home_advance:.0%} / {away_team} {knockout.away_advance:.0%}")
+        lines.append(f"Extra time: {knockout.goes_to_extra_time:.0%}, penalties: {knockout.goes_to_penalties:.0%}")
     if forecast.scorers and forecast.scorers.players:
         top = forecast.scorers.players[:3]
         names = ", ".join(f"{player.player} {player.anytime_scorer:.0%}" for player in top)
@@ -117,6 +142,7 @@ def render_markdown(forecast: MatchForecast, *, generated_at: datetime | None = 
         f"| Draw | {draw_p:.1%} |",
         f"| {away} win | {away_p:.1%} |",
         "",
+        *_knockout_md(forecast),
         "### Goals",
         f"- Over 2.5 goals: {forecast.over_under.probability:.1%}",
         f"- Both teams to score: {forecast.btts.probability:.1%}",

@@ -11,6 +11,7 @@ from .player import ScorerPrediction
 __all__ = [
     "CardsPrediction",
     "CornersPrediction",
+    "KnockoutPrediction",
     "MarketPrediction",
     "MatchForecast",
     "PerHalfPrediction",
@@ -132,6 +133,22 @@ class CardsPrediction:
 
 
 @dataclass(frozen=True, slots=True)
+class KnockoutPrediction:
+    """Extra-time and penalty-shootout outcomes for a knockout fixture."""
+
+    goes_to_extra_time: float
+    goes_to_penalties: float
+    home_advance: float
+    away_advance: float
+    home_shootout_win: float
+    away_shootout_win: float
+    home_penalty_conversion: float = 0.75
+    away_penalty_conversion: float = 0.75
+    decided_in_normal_time: float = 0.0
+    decided_in_extra_time: float = 0.0
+
+
+@dataclass(frozen=True, slots=True)
 class MatchForecast:
     """Combined fixture forecast across the supported markets."""
 
@@ -147,6 +164,7 @@ class MatchForecast:
     generated_notes: tuple[str, ...] = ()
     history: tuple[TeamMatchStats, ...] = ()
     scorers: ScorerPrediction | None = None
+    knockout: KnockoutPrediction | None = None
 
 
 def example_usage() -> None:

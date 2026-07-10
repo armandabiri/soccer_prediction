@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from soccer_prediction.example import load_sample_history, run_example, write_reports
-from soccer_prediction.example.switzerland_colombia_example import build_forecast, load_history
+from soccer_prediction.example import build_forecast, load_sample_history, run_example, write_reports
+from soccer_prediction.example.fixture_example import FIXTURES, load_history
+
+_SWI_COL = "switzerland_colombia"
 
 
 def test_wc2026_example_runs() -> None:
@@ -15,9 +17,18 @@ def test_wc2026_example_runs() -> None:
     assert len(load_sample_history()) > 0
 
 
+def test_fixtures_registry_has_expected_matchups() -> None:
+    """The constant FIXTURES registry names all competing team pairs."""
+    assert {"switzerland_colombia", "france_morocco", "argentina_egypt", "spain_belgium"} <= set(FIXTURES)
+    for key, spec in FIXTURES.items():
+        assert spec.key == key
+        assert spec.home and spec.away
+        assert spec.bundled_source != spec.live_source
+
+
 def test_switzerland_colombia_history_loads() -> None:
     """Both national teams have bundled history rows."""
-    history = load_history()
+    history = load_history(key=_SWI_COL)
     teams = {record.team for record in history}
     assert {"Switzerland", "Colombia"} <= teams
 
@@ -41,3 +52,15 @@ def test_switzerland_colombia_forecast_favours_stronger_side() -> None:
     forecast = build_forecast(live=False)
     assert forecast.corners.total_expected > 0.0
     assert 0.0 <= forecast.btts.probability <= 1.0
+
+
+def test_other_fixtures_load_independently() -> None:
+    """France/Morocco, Argentina/Egypt, Spain/Belgium load their own data, not Switzerland/Colombia's."""
+    france_morocco = load_history(key="france_morocco")
+    argentina_egypt = load_history(key="argentina_egypt")
+    spain_belgium = load_history(key="spain_belgium")
+    assert {"France", "Morocco"} <= {record.team for record in france_morocco}
+    assert {"Argentina", "Egypt"} <= {record.team for record in argentina_egypt}
+    assert {"Spain", "Belgium"} <= {record.team for record in spain_belgium}
+    assert {"Switzerland", "Colombia"}.isdisjoint({record.team for record in france_morocco})
+    assert {"Switzerland", "Colombia"}.isdisjoint({record.team for record in spain_belgium})

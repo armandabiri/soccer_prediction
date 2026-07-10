@@ -108,6 +108,7 @@ def render_html(forecast: MatchForecast, *, title: str | None = None, generated_
     sections = [
         _tiles(forecast, home, away, home_p, away_p),
         _result_section(home, away, home_p, draw_p, away_p),
+        _knockout_section(forecast, home, away),
         _goals_section(forecast),
         _score_section(forecast.correct_score),
         _half_section(forecast, home, away),
@@ -240,6 +241,34 @@ def _result_section(home: str, away: str, home_p: float, draw_p: float, away_p: 
         + _row(f"{_dot(away_color)}{away} win", away_p, away_color)
     )
     return _table("Match result (1X2)", "Outcome", rows)
+
+
+def _knockout_section(forecast: MatchForecast, home: str, away: str) -> str:
+    knockout = forecast.knockout
+    if knockout is None:
+        return ""
+    home_color = _team_color(home)
+    away_color = _team_color(away)
+    rows = (
+        _row(f"{_dot(home_color)}{home} to advance", knockout.home_advance, home_color)
+        + _row(f"{_dot(away_color)}{away} to advance", knockout.away_advance, away_color)
+        + _row("Goes to extra time", knockout.goes_to_extra_time)
+        + _row("Goes to penalties", knockout.goes_to_penalties)
+    )
+    header = '<thead><tr><th>Outcome</th><th>Likelihood</th><th class="n">Probability</th></tr></thead>'
+    settled = (
+        f"Settled in normal time {_pct(knockout.decided_in_normal_time)}, "
+        f"extra time {_pct(knockout.decided_in_extra_time)}, penalties {_pct(knockout.goes_to_penalties)}."
+    )
+    shootout = (
+        f"Shootout: {home} {_pct(knockout.home_shootout_win)} vs {away} {_pct(knockout.away_shootout_win)} "
+        f"(penalty conversion {_pct(knockout.home_penalty_conversion)} / "
+        f"{_pct(knockout.away_penalty_conversion)}; best-of-five plus sudden death)."
+    )
+    note = f'<p class="foot">{settled} {shootout}</p>'
+    return (
+        f'<h2>Extra time &amp; penalties</h2><div class="card"><table>{header}<tbody>{rows}</tbody></table>{note}</div>'
+    )
 
 
 def _goals_section(forecast: MatchForecast) -> str:

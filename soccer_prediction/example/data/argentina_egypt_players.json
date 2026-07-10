@@ -1,0 +1,23 @@
+[
+  {"name": "Lionel Messi", "team": "Argentina", "position": "FW", "appearances": 190, "goals": 112, "assists": 58},
+  {"name": "Julian Alvarez", "team": "Argentina", "position": "FW", "appearances": 40, "goals": 18, "assists": 9},
+  {"name": "Lautaro Martinez", "team": "Argentina", "position": "FW", "appearances": 75, "goals": 32, "assists": 12},
+  {"name": "Rodrigo De Paul", "team": "Argentina", "position": "MF", "appearances": 80, "goals": 8, "assists": 14},
+  {"name": "Enzo Fernandez", "team": "Argentina", "position": "MF", "appearances": 35, "goals": 4, "assists": 7},
+  {"name": "Alexis Mac Allister", "team": "Argentina", "position": "MF", "appearances": 40, "goals": 6, "assists": 8},
+  {"name": "Nicolas Otamendi", "team": "Argentina", "position": "DF", "appearances": 115, "goals": 5, "assists": 2},
+  {"name": "Nahuel Molina", "team": "Argentina", "position": "DF", "appearances": 45, "goals": 2, "assists": 6},
+  {"name": "Giovani Lo Celso", "team": "Argentina", "position": "MF", "appearances": 50, "goals": 7, "assists": 9},
+  {"name": "Angel Correa", "team": "Argentina", "position": "FW", "appearances": 35, "goals": 6, "assists": 5},
+
+  {"name": "Mohamed Salah", "team": "Egypt", "position": "FW", "appearances": 105, "goals": 60, "assists": 26},
+  {"name": "Omar Marmoush", "team": "Egypt", "position": "FW", "appearances": 30, "goals": 12, "assists": 7},
+  {"name": "Mostafa Mohamed", "team": "Egypt", "position": "FW", "appearances": 45, "goals": 14, "assists": 5},
+  {"name": "Trezeguet", "team": "Egypt", "position": "FW", "appearances": 65, "goals": 13, "assists": 10},
+  {"name": "Zizo", "team": "Egypt", "position": "MF", "appearances": 40, "goals": 9, "assists": 8},
+  {"name": "Mohamed Elneny", "team": "Egypt", "position": "MF", "appearances": 95, "goals": 5, "assists": 6},
+  {"name": "Akram Tawfik", "team": "Egypt", "position": "DF", "appearances": 35, "goals": 2, "assists": 4},
+  {"name": "Ahmed Hegazi", "team": "Egypt", "position": "DF", "appearances": 80, "goals": 4, "assists": 1},
+  {"name": "Hamdi Fathi", "team": "Egypt", "position": "MF", "appearances": 50, "goals": 3, "assists": 3},
+  {"name": "Mohamed Abdelmonem", "team": "Egypt", "position": "DF", "appearances": 30, "goals": 1, "assists": 2}
+]

@@ -1,0 +1,23 @@
+[
+  {"team": "France", "opponent": "Austria", "date": "2024-06-17", "is_home": true, "goals_for": 1, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 6, "corners_against": 3, "yellows": 2, "reds": 0},
+  {"team": "France", "opponent": "Netherlands", "date": "2024-06-21", "is_home": true, "goals_for": 0, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 5, "corners_against": 4, "yellows": 2, "reds": 0},
+  {"team": "France", "opponent": "Poland", "date": "2024-06-25", "is_home": true, "goals_for": 1, "goals_against": 1, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 6, "corners_against": 3, "yellows": 1, "reds": 0},
+  {"team": "France", "opponent": "Belgium", "date": "2024-07-01", "is_home": true, "goals_for": 1, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 5, "corners_against": 4, "yellows": 2, "reds": 0},
+  {"team": "France", "opponent": "Portugal", "date": "2024-07-05", "is_home": true, "goals_for": 0, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 4, "corners_against": 5, "yellows": 1, "reds": 0},
+  {"team": "France", "opponent": "Spain", "date": "2024-07-09", "is_home": false, "goals_for": 1, "goals_against": 2, "ht_goals_for": 1, "ht_goals_against": 1, "corners_for": 3, "corners_against": 6, "yellows": 2, "reds": 0},
+  {"team": "France", "opponent": "Italy", "date": "2024-09-06", "is_home": true, "goals_for": 3, "goals_against": 1, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 7, "corners_against": 3, "yellows": 1, "reds": 0},
+  {"team": "France", "opponent": "Belgium", "date": "2024-10-14", "is_home": false, "goals_for": 2, "goals_against": 1, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 6, "corners_against": 4, "yellows": 2, "reds": 0},
+  {"team": "France", "opponent": "Israel", "date": "2024-11-14", "is_home": true, "goals_for": 0, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 5, "corners_against": 2, "yellows": 1, "reds": 0},
+  {"team": "France", "opponent": "Croatia", "date": "2025-03-23", "is_home": true, "goals_for": 2, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 6, "corners_against": 3, "yellows": 1, "reds": 0},
+
+  {"team": "Morocco", "opponent": "Angola", "date": "2024-01-15", "is_home": true, "goals_for": 1, "goals_against": 1, "ht_goals_for": 0, "ht_goals_against": 1, "corners_for": 5, "corners_against": 4, "yellows": 2, "reds": 0},
+  {"team": "Morocco", "opponent": "Tanzania", "date": "2024-01-20", "is_home": true, "goals_for": 3, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 7, "corners_against": 2, "yellows": 1, "reds": 0},
+  {"team": "Morocco", "opponent": "Zambia", "date": "2024-01-24", "is_home": true, "goals_for": 1, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 5, "corners_against": 3, "yellows": 1, "reds": 0},
+  {"team": "Morocco", "opponent": "DR Congo", "date": "2024-02-06", "is_home": true, "goals_for": 1, "goals_against": 1, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 4, "corners_against": 5, "yellows": 3, "reds": 0},
+  {"team": "Morocco", "opponent": "Ivory Coast", "date": "2024-02-07", "is_home": true, "goals_for": 1, "goals_against": 2, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 5, "corners_against": 6, "yellows": 4, "reds": 0},
+  {"team": "Morocco", "opponent": "Gabon", "date": "2024-06-07", "is_home": false, "goals_for": 5, "goals_against": 1, "ht_goals_for": 2, "ht_goals_against": 0, "corners_for": 8, "corners_against": 3, "yellows": 1, "reds": 0},
+  {"team": "Morocco", "opponent": "Eswatini", "date": "2024-09-05", "is_home": true, "goals_for": 4, "goals_against": 0, "ht_goals_for": 2, "ht_goals_against": 0, "corners_for": 8, "corners_against": 1, "yellows": 1, "reds": 0},
+  {"team": "Morocco", "opponent": "Niger", "date": "2024-10-12", "is_home": false, "goals_for": 2, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 6, "corners_against": 2, "yellows": 2, "reds": 0},
+  {"team": "Morocco", "opponent": "Gabon", "date": "2024-11-15", "is_home": true, "goals_for": 2, "goals_against": 1, "ht_goals_for": 1, "ht_goals_against": 1, "corners_for": 6, "corners_against": 4, "yellows": 2, "reds": 0},
+  {"team": "Morocco", "opponent": "Niger", "date": "2025-03-21", "is_home": true, "goals_for": 3, "goals_against": 0, "ht_goals_for": 2, "ht_goals_against": 0, "corners_for": 7, "corners_against": 2, "yellows": 1, "reds": 0}
+]

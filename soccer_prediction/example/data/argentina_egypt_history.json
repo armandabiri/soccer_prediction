@@ -1,0 +1,23 @@
+[
+  {"team": "Argentina", "opponent": "Peru", "date": "2024-06-30", "is_home": true, "goals_for": 2, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 6, "corners_against": 2, "yellows": 1, "reds": 0},
+  {"team": "Argentina", "opponent": "Canada", "date": "2024-07-10", "is_home": true, "goals_for": 2, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 7, "corners_against": 3, "yellows": 2, "reds": 0},
+  {"team": "Argentina", "opponent": "Colombia", "date": "2024-07-14", "is_home": true, "goals_for": 1, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 5, "corners_against": 4, "yellows": 3, "reds": 0},
+  {"team": "Argentina", "opponent": "Chile", "date": "2024-09-06", "is_home": true, "goals_for": 3, "goals_against": 0, "ht_goals_for": 2, "ht_goals_against": 0, "corners_for": 8, "corners_against": 2, "yellows": 1, "reds": 0},
+  {"team": "Argentina", "opponent": "Colombia", "date": "2024-09-10", "is_home": false, "goals_for": 1, "goals_against": 2, "ht_goals_for": 1, "ht_goals_against": 1, "corners_for": 4, "corners_against": 6, "yellows": 2, "reds": 0},
+  {"team": "Argentina", "opponent": "Bolivia", "date": "2024-10-15", "is_home": false, "goals_for": 6, "goals_against": 0, "ht_goals_for": 3, "ht_goals_against": 0, "corners_for": 9, "corners_against": 1, "yellows": 1, "reds": 0},
+  {"team": "Argentina", "opponent": "Paraguay", "date": "2024-11-14", "is_home": true, "goals_for": 1, "goals_against": 1, "ht_goals_for": 0, "ht_goals_against": 1, "corners_for": 5, "corners_against": 5, "yellows": 2, "reds": 0},
+  {"team": "Argentina", "opponent": "Peru", "date": "2024-11-19", "is_home": false, "goals_for": 1, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 5, "corners_against": 3, "yellows": 2, "reds": 0},
+  {"team": "Argentina", "opponent": "Uruguay", "date": "2025-03-21", "is_home": true, "goals_for": 1, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 6, "corners_against": 4, "yellows": 2, "reds": 0},
+  {"team": "Argentina", "opponent": "Brazil", "date": "2025-03-25", "is_home": false, "goals_for": 4, "goals_against": 1, "ht_goals_for": 2, "ht_goals_against": 0, "corners_for": 7, "corners_against": 3, "yellows": 1, "reds": 0},
+
+  {"team": "Egypt", "opponent": "Ghana", "date": "2024-01-18", "is_home": true, "goals_for": 2, "goals_against": 2, "ht_goals_for": 1, "ht_goals_against": 1, "corners_for": 5, "corners_against": 5, "yellows": 2, "reds": 0},
+  {"team": "Egypt", "opponent": "Cape Verde", "date": "2024-01-23", "is_home": true, "goals_for": 1, "goals_against": 1, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 4, "corners_against": 4, "yellows": 3, "reds": 0},
+  {"team": "Egypt", "opponent": "Mozambique", "date": "2024-01-27", "is_home": true, "goals_for": 2, "goals_against": 2, "ht_goals_for": 1, "ht_goals_against": 1, "corners_for": 6, "corners_against": 4, "yellows": 2, "reds": 0},
+  {"team": "Egypt", "opponent": "DR Congo", "date": "2024-02-02", "is_home": true, "goals_for": 1, "goals_against": 1, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 5, "corners_against": 5, "yellows": 3, "reds": 1},
+  {"team": "Egypt", "opponent": "Djibouti", "date": "2024-06-06", "is_home": true, "goals_for": 5, "goals_against": 0, "ht_goals_for": 3, "ht_goals_against": 0, "corners_for": 9, "corners_against": 1, "yellows": 1, "reds": 0},
+  {"team": "Egypt", "opponent": "Botswana", "date": "2024-09-06", "is_home": false, "goals_for": 3, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 6, "corners_against": 2, "yellows": 1, "reds": 0},
+  {"team": "Egypt", "opponent": "Mauritania", "date": "2024-10-11", "is_home": true, "goals_for": 3, "goals_against": 0, "ht_goals_for": 2, "ht_goals_against": 0, "corners_for": 7, "corners_against": 2, "yellows": 1, "reds": 0},
+  {"team": "Egypt", "opponent": "Burkina Faso", "date": "2024-11-15", "is_home": false, "goals_for": 1, "goals_against": 1, "ht_goals_for": 0, "ht_goals_against": 1, "corners_for": 4, "corners_against": 5, "yellows": 2, "reds": 0},
+  {"team": "Egypt", "opponent": "Sierra Leone", "date": "2024-11-18", "is_home": true, "goals_for": 2, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 6, "corners_against": 3, "yellows": 2, "reds": 0},
+  {"team": "Egypt", "opponent": "Ethiopia", "date": "2025-03-21", "is_home": false, "goals_for": 2, "goals_against": 1, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 5, "corners_against": 4, "yellows": 2, "reds": 0}
+]

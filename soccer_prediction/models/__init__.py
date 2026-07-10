@@ -7,6 +7,7 @@ from .player import PlayerMarketPrediction, PlayerStats, ScorerPrediction
 from .prediction import (
     CardsPrediction,
     CornersPrediction,
+    KnockoutPrediction,
     MarketPrediction,
     MatchForecast,
     PerHalfPrediction,
@@ -18,6 +19,7 @@ __all__ = [
     "CardsPrediction",
     "CornersPrediction",
     "Fixture",
+    "KnockoutPrediction",
     "MarketPrediction",
     "Match",
     "MatchForecast",

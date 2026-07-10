@@ -60,7 +60,7 @@ def _scorers_table_md(forecast: MatchForecast) -> list[str]:
     for player in scorers.players[:12]:
         rows.append(
             f"| {player.player} | {player.team} | {player.position} "
-            f"| {player.recent_goals:g}G/{player.recent_assists:g}A in {player.recent_appearances}"
+            f"| {player.recent_goals:.1f}G/{player.recent_assists:.1f}A in {player.recent_appearances}"
             f"{'*' if player.recent_form_estimated else ''} | {player.score_probability:.0%} "
             f"| {player.assist_probability:.0%} | {player.to_score_or_assist:.0%} "
             f"| {player.first_scorer:.0%} |"

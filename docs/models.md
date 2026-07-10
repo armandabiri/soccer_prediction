@@ -50,7 +50,7 @@ Poisson count model on team disciplinary rates with a home-advantage factor (hom
 
 ## Player scoring and assists
 
-Player goal and assist allocation uses per-appearance production rather than raw career totals, with position-specific empirical priors to stabilize small samples. When a player source supplies `recent_appearances`, `recent_goals`, and `recent_assists` for up to 20 games, recent form receives a bounded 55% blend; otherwise reports clearly mark an up-to-20 equivalent estimated from aggregate totals. The model exposes separate score, assist, score-or-assist, and first-scorer probabilities. Expected assists are limited to a 72% assisted-goal share so assist markets do not assume every goal has a credited assist. These estimates still assume participation and are not lineup/minutes-aware.
+Player goal and assist allocation uses per-appearance production rather than raw career totals, with position-specific empirical priors to stabilize small samples. When a player source supplies `recent_appearances`, `recent_goals`, and `recent_assists` for up to 20 games, recent form receives a bounded 55% blend; otherwise reports clearly mark an up-to-20 equivalent estimated from aggregate totals. The HTML report shows both compact per-player form bars and an all-player comparison chart (20 bars for the bundled two-squad data). The model exposes separate score, assist, score-or-assist, and first-scorer probabilities. Expected assists are limited to a 72% assisted-goal share so assist markets do not assume every goal has a credited assist. These estimates still assume participation and are not lineup/minutes-aware.
 
 ## Per-half scoring
 

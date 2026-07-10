@@ -79,6 +79,8 @@ def test_forecast_includes_scorers() -> None:
     html = render_html(forecast)
     assert "Recent scoring (max 20)" in html
     assert 'class="formbar"' in html
+    assert html.count('class="player-form-row"') == 20
+    assert "Recent scoring comparison — all 20 listed players" in html
     assert ">Score</th>" in html
     assert ">Assist</th>" in html
 

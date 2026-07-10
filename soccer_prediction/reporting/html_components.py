@@ -21,6 +21,7 @@ body { margin:0; padding:32px 16px; background:var(--bg); color:var(--ink);
 .wrap { max-width: 900px; margin: 0 auto; }
 h1 { font-size: 1.7rem; margin:0 0 4px; }
 h2 { font-size: 1.05rem; margin: 26px 0 10px; letter-spacing:.02em; }
+h3 { font-size:.92rem; margin:18px 0 8px; color:var(--muted); }
 .sub { color: var(--muted); margin:0 0 20px; }
 .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:8px; }
 .tile { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; }
@@ -36,6 +37,14 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .formbar { position:relative; height:7px; min-width:120px; border-radius:6px; background:var(--bar); overflow:hidden; }
 .formbar > span { position:absolute; inset:0 auto 0 0; border-radius:6px; }
 .formlabel { display:block; margin-top:4px; color:var(--muted); font-size:.75rem; white-space:nowrap; }
+.player-form-chart { display:grid; gap:7px; padding:10px 0 2px; }
+.player-form-row { display:grid; grid-template-columns:minmax(135px,1.15fr) minmax(180px,3fr) 100px;
+  gap:10px; align-items:center; }
+.player-form-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.player-form-track { height:12px; border-radius:7px; background:var(--bar); overflow:hidden; }
+.player-form-fill { height:100%; border-radius:7px; }
+.player-form-value { text-align:right; color:var(--muted); font-size:.8rem; font-variant-numeric:tabular-nums; }
+@media (max-width:600px) { .player-form-row { grid-template-columns:minmax(105px,1fr) minmax(100px,2fr) 76px; } }
 .foot { color:var(--muted); font-size:.82rem; margin-top:24px; }
 .pill { display:inline-block; background:var(--bar); border-radius:999px; padding:2px 10px; font-size:.8rem; }
 .dot { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:7px;
@@ -77,10 +86,36 @@ def _pct(value: float) -> str:
     return f"{value * 100:.1f}%"
 
 
+def _count(value: float) -> str:
+    return f"{value:.1f}".rstrip("0").rstrip(".")
+
+
 def _scorers_section(forecast: MatchForecast) -> str:
     scorers = forecast.scorers
     if scorers is None or not scorers.players:
         return ""
+    chart_players = sorted(scorers.players, key=lambda item: item.recent_goals, reverse=True)
+    maximum_goals = max((player.recent_goals for player in chart_players), default=1.0) or 1.0
+    chart_rows: list[str] = []
+    for player in chart_players:
+        color = _team_color(player.team)
+        width = min(100.0, player.recent_goals / maximum_goals * 100.0)
+        marker = "*" if player.recent_form_estimated else ""
+        sample = f"{player.recent_appearances} apps{marker}" if player.recent_appearances else "no sample"
+        label = f"{_count(player.recent_goals)} goals / {sample}"
+        chart_rows.append(
+            f'<div class="player-form-row"><div class="player-form-name" title="{escape(player.player, quote=True)}">'
+            f"{_dot(color)}{escape(player.player)}</div>"
+            f'<div class="player-form-track" role="img" aria-label="{escape(label, quote=True)}">'
+            f'<div class="player-form-fill" style="width:{width:.1f}%;background:{color}"></div></div>'
+            f'<div class="player-form-value">{escape(label)}</div></div>'
+        )
+    chart = (
+        f'<h3>Recent scoring comparison — all {len(chart_players)} listed players</h3><div class="card">'
+        f'<div class="player-form-chart">{"".join(chart_rows)}</div>'
+        f'<p class="foot">Each bar compares goals over the latest available sample of up to 20 appearances. '
+        f"Bars are scaled to the leading player. * marks an aggregate-rate estimate.</p></div>"
+    )
     rows: list[str] = []
     for player in scorers.players[:12]:
         color = _team_color(player.team)
@@ -89,7 +124,7 @@ def _scorers_section(forecast: MatchForecast) -> str:
         form_width = min(100.0, goal_rate * 100.0)
         estimate_marker = "*" if player.recent_form_estimated else ""
         form_label = (
-            f"{player.recent_goals:g}G · {player.recent_assists:g}A / {appearances}{estimate_marker}"
+            f"{_count(player.recent_goals)}G · {_count(player.recent_assists)}A / {appearances}{estimate_marker}"
             if appearances
             else "n/a"
         )
@@ -111,7 +146,8 @@ def _scorers_section(forecast: MatchForecast) -> str:
         '<th class="n">First</th></tr></thead>'
     )
     return (
-        f'<h2>Goalscorers &amp; assists</h2><div class="card"><div style="overflow-x:auto">'
+        f'<h2>Goalscorers &amp; assists</h2>{chart}<h3>Fixture probabilities</h3>'
+        f'<div class="card"><div style="overflow-x:auto">'
         f'<table>{header}<tbody>{"".join(rows)}</tbody></table></div><p class="foot">'
         f"Score and Assist are separate anytime probabilities; Score/assist is either event; First is to open "
         f"the scoring. The bar is goals per appearance over up to 20 recent games. * means an up-to-20 equivalent "

@@ -15,6 +15,10 @@ def test_forecast_fixture_shape() -> None:
     assert isinstance(forecast.cards, CardsPrediction)
     assert 0.0 <= forecast.result.probability <= 1.0
     assert forecast.corners.total_expected > 0.0
+    assert forecast.model_name == "ensemble"
+    assert forecast.scenario_analysis is not None
+    assert len(forecast.scenario_analysis.model_estimates) == 5
+    assert forecast.scenario_analysis.simulations > 0
 
 
 def test_predict_match_single_market() -> None:

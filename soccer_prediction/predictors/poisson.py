@@ -11,7 +11,7 @@ from soccer_prediction.models import MarketPrediction, ScorelineGrid, TeamMatchS
 from soccer_prediction.predictors.base import register_model
 from soccer_prediction.predictors.markets import derive_markets
 
-__all__ = ["PoissonPredictor", "poisson_grid", "poisson_tail_at_least"]
+__all__ = ["PoissonPredictor", "expected_goals", "poisson_grid", "poisson_tail_at_least"]
 
 
 class PoissonPredictor:
@@ -41,12 +41,48 @@ class PoissonPredictor:
 
 def expected_goals(rates: RateBook, home: str, away: str) -> tuple[float, float]:
     """Estimate home and away goal expectations."""
-    home_rates = rates.for_team(home)
-    away_rates = rates.for_team(away)
-    prior = max(rates.global_rates.goals_for, 0.8)
-    home_lambda = max(0.05, (home_rates.goals_for + away_rates.goals_against) / 2.0 + 0.12 * prior)
-    away_lambda = max(0.05, (away_rates.goals_for + home_rates.goals_against) / 2.0)
+    league_rate = max(rates.global_rates.goals_for, 0.8)
+    home_lambda = league_rate * rates.attack_for(home) * rates.defence_weakness_for(away) * 1.08
+    away_lambda = league_rate * rates.attack_for(away) * rates.defence_weakness_for(home) * 0.92
+    home_lambda, away_lambda = _blend_head_to_head(rates, home, away, home_lambda, away_lambda)
+    home_lambda = min(4.5, max(0.2, home_lambda))
+    away_lambda = min(4.5, max(0.2, away_lambda))
     return home_lambda, away_lambda
+
+
+def _blend_head_to_head(
+    rates: RateBook,
+    home: str,
+    away: str,
+    home_lambda: float,
+    away_lambda: float,
+) -> tuple[float, float]:
+    home_history = rates.for_matchup(home, away)
+    away_history = rates.for_matchup(away, home)
+    available = tuple(item for item in (home_history, away_history) if item is not None)
+    if not available:
+        return home_lambda, away_lambda
+    meetings = max(
+        rates.matchup_effective_sample(home, away),
+        rates.matchup_effective_sample(away, home),
+    )
+    weight = min(0.35, 0.45 * meetings / (meetings + 5.0))
+    if home_history is not None:
+        direct_home = home_history.goals_for
+    else:
+        assert away_history is not None
+        direct_home = away_history.goals_against
+    if away_history is not None:
+        direct_away = away_history.goals_for
+    else:
+        assert home_history is not None
+        direct_away = home_history.goals_against
+    direct_home *= 1.08
+    direct_away *= 0.92
+    return (
+        home_lambda * (1.0 - weight) + direct_home * weight,
+        away_lambda * (1.0 - weight) + direct_away * weight,
+    )
 
 
 def poisson_grid(home_lambda: float, away_lambda: float, max_goals: int) -> ScorelineGrid:
@@ -63,8 +99,7 @@ def poisson_tail_at_least(lam: float, threshold: int, max_count: int = 30) -> fl
     if threshold <= 0:
         return 1.0
     below = sum(_poisson_pmf(value, lam) for value in range(threshold))
-    remainder = max(0.0, 1.0 - sum(_poisson_pmf(value, lam) for value in range(max_count + 1)))
-    return min(1.0, max(0.0, 1.0 - below + remainder))
+    return min(1.0, max(0.0, 1.0 - below))
 
 
 def _poisson_pmf(k: int, lam: float) -> float:

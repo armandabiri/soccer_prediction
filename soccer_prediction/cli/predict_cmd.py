@@ -18,7 +18,13 @@ OutputFormat = Literal["text", "json", "md", "html"]
 def cmd_predict(
     home: Annotated[str, typer.Option("--home")],
     away: Annotated[str, typer.Option("--away")],
-    model: Annotated[str, typer.Option("--model")] = "dixon_coles",
+    model: Annotated[
+        str,
+        typer.Option(
+            "--model",
+            help="Goal model: ensemble, dixon_coles, poisson, negative_binomial, bivariate_poisson, or monte_carlo",
+        ),
+    ] = "ensemble",
     source: Annotated[str, typer.Option("--source")] = "auto",
     output_format: Annotated[OutputFormat, typer.Option("--format")] = "text",
     output: Annotated[Path | None, typer.Option("--output", help="Write the report to a file")] = None,

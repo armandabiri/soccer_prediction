@@ -180,7 +180,7 @@ def load_players(key: str = DEFAULT_FIXTURE) -> list[PlayerStats]:
     return load_packaged_players(_spec(key).players_file)
 
 
-def build_forecast(model: str = "dixon_coles", *, key: str = DEFAULT_FIXTURE, live: bool = True) -> MatchForecast:
+def build_forecast(model: str = "ensemble", *, key: str = DEFAULT_FIXTURE, live: bool = True) -> MatchForecast:
     """Forecast a fixture (live real 2024-to-date data by default)."""
     spec = _spec(key)
     source = spec.live_source if live else spec.bundled_source
@@ -191,7 +191,7 @@ def write_reports(
     output_dir: str | Path | None = None,
     *,
     key: str = DEFAULT_FIXTURE,
-    model: str = "dixon_coles",
+    model: str = "ensemble",
     live: bool = True,
 ) -> dict[str, Path]:
     """Write timestamped HTML and Markdown reports for a fixture and return their paths."""

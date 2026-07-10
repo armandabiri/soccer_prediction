@@ -14,8 +14,12 @@ __all__ = [
     "KnockoutPrediction",
     "MarketPrediction",
     "MatchForecast",
+    "MatchupContext",
+    "ModelEstimate",
     "PerHalfPrediction",
     "ScorelineGrid",
+    "ScenarioAnalysis",
+    "TeamForm",
     "example_usage",
     "main",
 ]
@@ -149,6 +153,72 @@ class KnockoutPrediction:
 
 
 @dataclass(frozen=True, slots=True)
+class ModelEstimate:
+    """Headline probabilities produced by one goal-model family."""
+
+    model_name: str
+    home_win: float
+    draw: float
+    away_win: float
+    home_expected_goals: float
+    away_expected_goals: float
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioAnalysis:
+    """Uncertainty diagnostics from latent match-scenario simulation."""
+
+    simulations: int
+    home_goals_interval: tuple[int, int]
+    away_goals_interval: tuple[int, int]
+    total_goals_interval: tuple[int, int]
+    home_clean_sheet: float
+    away_clean_sheet: float
+    scoreless_draw: float
+    five_plus_goals: float
+    three_plus_goal_margin: float
+    model_disagreement: float
+    outcome_uncertainty: float
+    agreement_label: str
+    model_estimates: tuple[ModelEstimate, ...] = ()
+    data_uncertainty: float = 1.0
+    data_quality_label: str = "low"
+
+
+@dataclass(frozen=True, slots=True)
+class TeamForm:
+    """Recency-weighted form for one team."""
+
+    team: str
+    matches: int
+    effective_matches: float
+    points_per_match: float
+    goals_for_per_match: float
+    goals_against_per_match: float
+    corners_for_per_match: float
+    recent_results: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class MatchupContext:
+    """Direct meetings, opponent-network connections, and inferred game style."""
+
+    home_form: TeamForm
+    away_form: TeamForm
+    head_to_head_matches: int
+    home_head_to_head_wins: int
+    head_to_head_draws: int
+    away_head_to_head_wins: int
+    head_to_head_average_goals: float
+    head_to_head_average_corners: float
+    network_team_count: int
+    network_match_count: int
+    connection_paths: tuple[tuple[str, ...], ...]
+    style_label: str
+    style_description: str
+
+
+@dataclass(frozen=True, slots=True)
 class MatchForecast:
     """Combined fixture forecast across the supported markets."""
 
@@ -165,6 +235,8 @@ class MatchForecast:
     history: tuple[TeamMatchStats, ...] = ()
     scorers: ScorerPrediction | None = None
     knockout: KnockoutPrediction | None = None
+    scenario_analysis: ScenarioAnalysis | None = None
+    matchup_context: MatchupContext | None = None
 
 
 def example_usage() -> None:

@@ -53,6 +53,18 @@ def _corner_rate(value: float, prior: float) -> float:
 
 
 def _corner_expectations(rates: RateBook, home: str, away: str) -> tuple[float, float]:
+    if rates.corner_attack_factors:
+        league_rate = max(rates.global_rates.corners_for, _PRIOR_CORNERS_FOR)
+        home_expected = league_rate * rates.corner_attack_for(home) * rates.corner_concession_for(away)
+        away_expected = league_rate * rates.corner_attack_for(away) * rates.corner_concession_for(home)
+        home_expected, away_expected = _blend_head_to_head_corners(
+            rates,
+            home,
+            away,
+            home_expected + _HOME_CORNER_EDGE,
+            away_expected,
+        )
+        return max(1.0, home_expected), max(1.0, away_expected)
     home_rates = rates.for_team(home)
     away_rates = rates.for_team(away)
     home_for = _corner_rate(home_rates.corners_for, _PRIOR_CORNERS_FOR)
@@ -62,6 +74,40 @@ def _corner_expectations(rates: RateBook, home: str, away: str) -> tuple[float, 
     home_expected = max(1.0, (home_for + away_against) / 2.0 + _HOME_CORNER_EDGE)
     away_expected = max(1.0, (away_for + home_against) / 2.0)
     return home_expected, away_expected
+
+
+def _blend_head_to_head_corners(
+    rates: RateBook,
+    home: str,
+    away: str,
+    home_expected: float,
+    away_expected: float,
+) -> tuple[float, float]:
+    home_history = rates.for_matchup(home, away)
+    away_history = rates.for_matchup(away, home)
+    if home_history is None and away_history is None:
+        return home_expected, away_expected
+    if home_history is not None:
+        direct_home = home_history.corners_for
+    else:
+        assert away_history is not None
+        direct_home = away_history.corners_against
+    if away_history is not None:
+        direct_away = away_history.corners_for
+    else:
+        assert home_history is not None
+        direct_away = home_history.corners_against
+    if direct_home <= 0.5 and direct_away <= 0.5:
+        return home_expected, away_expected
+    meetings = max(
+        rates.matchup_effective_sample(home, away),
+        rates.matchup_effective_sample(away, home),
+    )
+    weight = min(0.30, 0.40 * meetings / (meetings + 5.0))
+    return (
+        home_expected * (1.0 - weight) + direct_home * weight,
+        away_expected * (1.0 - weight) + direct_away * weight,
+    )
 
 
 def _quantile_floor(lam: float, quantile: float) -> int:

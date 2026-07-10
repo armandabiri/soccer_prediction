@@ -45,6 +45,10 @@ class ModelConfig:
     time_decay_xi: float = 0.0039
     recency_window_days: int = 730
     max_goals: int = 8
+    scenario_simulations: int = 20_000
+    random_seed: int = 2026
+    opponent_network_depth: int = 1
+    opponent_network_max_teams: int = 12
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +98,10 @@ def _apply_env(config: dict[str, Any]) -> dict[str, Any]:
         ("model", "time_decay_xi"): os.getenv("SOCCER_PREDICTION_MODEL_TIME_DECAY_XI"),
         ("model", "recency_window_days"): os.getenv("SOCCER_PREDICTION_MODEL_RECENCY_WINDOW_DAYS"),
         ("model", "max_goals"): os.getenv("SOCCER_PREDICTION_MODEL_MAX_GOALS"),
+        ("model", "scenario_simulations"): os.getenv("SOCCER_PREDICTION_MODEL_SCENARIO_SIMULATIONS"),
+        ("model", "random_seed"): os.getenv("SOCCER_PREDICTION_MODEL_RANDOM_SEED"),
+        ("model", "opponent_network_depth"): os.getenv("SOCCER_PREDICTION_MODEL_OPPONENT_NETWORK_DEPTH"),
+        ("model", "opponent_network_max_teams"): os.getenv("SOCCER_PREDICTION_MODEL_OPPONENT_NETWORK_MAX_TEAMS"),
         ("rate_limits", "api_football"): os.getenv("SOCCER_PREDICTION_RATE_LIMITS_API_FOOTBALL"),
     }
     updated = dict(config)
@@ -103,7 +111,16 @@ def _apply_env(config: dict[str, Any]) -> dict[str, Any]:
         section_data = dict(updated.get(section, {}))
         if key == "dir":
             section_data[key] = str(Path(raw_value).expanduser())
-        elif key in {"ttl_hours", "recency_window_days", "max_goals", "api_football"}:
+        elif key in {
+            "ttl_hours",
+            "recency_window_days",
+            "max_goals",
+            "scenario_simulations",
+            "random_seed",
+            "opponent_network_depth",
+            "opponent_network_max_teams",
+            "api_football",
+        }:
             section_data[key] = int(raw_value)
         elif key == "time_decay_xi":
             section_data[key] = float(raw_value)
@@ -139,6 +156,10 @@ def load_config(path: str | Path | None = None) -> AppConfig:
             time_decay_xi=float(model_data.get("time_decay_xi", 0.0039)),
             recency_window_days=int(model_data.get("recency_window_days", 730)),
             max_goals=int(model_data.get("max_goals", 8)),
+            scenario_simulations=int(model_data.get("scenario_simulations", 20_000)),
+            random_seed=int(model_data.get("random_seed", 2026)),
+            opponent_network_depth=int(model_data.get("opponent_network_depth", 1)),
+            opponent_network_max_teams=int(model_data.get("opponent_network_max_teams", 12)),
         ),
     )
 

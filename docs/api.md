@@ -4,16 +4,16 @@ Public surface of `soccer_prediction`. Import from the top-level package or `soc
 
 ## Forecasting
 
-### `forecast_fixture(home, away, *, model="dixon_coles", source="auto") -> MatchForecast`
+### `forecast_fixture(home, away, *, model="ensemble", source="auto") -> MatchForecast`
 
 Forecast every supported market for a fixture.
 
 - `home`, `away` (`str`): team names.
-- `model` (`str`): registered predictor — `dixon_coles` (default) or `poisson`.
+- `model` (`str`): registered predictor — `ensemble` (default), `poisson`, `dixon_coles`, `negative_binomial`, `bivariate_poisson`, or `monte_carlo`.
 - `source` (`str`): data source — `auto` (model priors, no network), a registered adapter (`api_football`, `football_data_csv`, `worldcup_open`, `statsbomb`), or a bundled demo source (`bundled_wc2026`, `bundled_swi_col`).
 - Returns a `MatchForecast`. Raises `InsufficientHistoryError` when a non-`auto` source yields no usable history.
 
-### `predict_match(home, away, market, *, model="dixon_coles", source="auto") -> MarketPrediction`
+### `predict_match(home, away, market, *, model="ensemble", source="auto") -> MarketPrediction`
 
 Return a single market: `result`, `over_under`, `btts`, or any key from `derive_markets` (`home_win`, `draw`, `away_win`, `over_2_5`, `btts_yes`, …).
 
@@ -21,7 +21,11 @@ Return a single market: `result`, `over_under`, `btts`, or any key from `derive_
 
 | Type | Key fields |
 | --- | --- |
-| `MatchForecast` | `result`, `correct_score` (`ScorelineGrid`), `over_under`, `btts`, `per_half`, `corners`, `cards`, `model_name`, `generated_notes` |
+| `MatchForecast` | `result`, `correct_score` (`ScorelineGrid`), `over_under`, `btts`, `per_half`, `corners`, `cards`, `scenario_analysis`, `matchup_context`, `model_name`, `generated_notes` |
+| `ScenarioAnalysis` | simulation count and goal intervals, clean-sheet/tail probabilities, model disagreement, outcome uncertainty, `model_estimates` |
+| `ModelEstimate` | one model's 1X2 probabilities and home/away expected goals |
+| `MatchupContext` | recent forms, direct-meeting record, opponent-network paths/coverage, and inferred game style |
+| `TeamForm` | recency-weighted effective sample, points, goals, corners, and last-five result labels |
 | `ScorelineGrid` | `home_draw_away()`, `both_teams_to_score()`, `over_under(line)`, `total_probability()`, `cell_probability(h, a)` |
 | `CornersPrediction` | `home_expected`, `away_expected`, `total_expected`, `total_over_lines`, `home_minimum`, `away_minimum`, `prob_at_least` |
 | `CardsPrediction` | `yellows_expected`, `reds_expected`, `total_expected`, `over_under_lines`, `booking_points_expected` |
@@ -55,5 +59,9 @@ Return a single market: `result`, `over_under`, `btts`, or any key from `derive_
 | `SOCCER_PREDICTION_MODEL_MAX_GOALS` | `model.max_goals` | `8` |
 | `SOCCER_PREDICTION_MODEL_RECENCY_WINDOW_DAYS` | `model.recency_window_days` | `730` |
 | `SOCCER_PREDICTION_MODEL_TIME_DECAY_XI` | `model.time_decay_xi` | `0.0039` |
+| `SOCCER_PREDICTION_MODEL_SCENARIO_SIMULATIONS` | `model.scenario_simulations` | `20000` |
+| `SOCCER_PREDICTION_MODEL_RANDOM_SEED` | `model.random_seed` | `2026` |
+| `SOCCER_PREDICTION_MODEL_OPPONENT_NETWORK_DEPTH` | `model.opponent_network_depth` | `1` |
+| `SOCCER_PREDICTION_MODEL_OPPONENT_NETWORK_MAX_TEAMS` | `model.opponent_network_max_teams` | `12` |
 
 API keys are read from the environment only; never commit them.

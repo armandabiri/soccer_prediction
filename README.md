@@ -4,7 +4,7 @@ Forecast soccer matches — with the **FIFA World Cup 2026** as the headline use
 
 - Pure-Python core (no heavy runtime dependencies); optional `[accel]` extra for numpy/scipy/penaltyblog.
 - Pluggable free data sources (API-Football, StatsBomb open-data, football-data.co.uk, openfootball) behind one `DataSource` contract.
-- Interchangeable models (independent Poisson, Dixon-Coles) behind one `Predictor` contract, plus dedicated corner, card, and per-half models.
+- Six interchangeable goal models, including a robust ensemble and reproducible random-scenario simulation, plus dedicated corner, card, and per-half models.
 - Library API + `soccer-predict` CLI + runnable offline examples.
 
 ## Table of Contents
@@ -40,6 +40,8 @@ Key features:
 - 🏆 **Extra time & penalties** — knockout advancement probability with an extra-time model and an analytical best-of-five-plus-sudden-death shootout.
 - 🔌 **Free data** — swap data sources without touching the models; bundled offline samples for zero-setup demos.
 - 🧪 **Trustworthy** — walk-forward backtesting with ranked-probability-score, log-loss, and Brier metrics.
+- 🎲 **Uncertainty-aware** — cross-model agreement, middle-80% simulated goal ranges, and probabilities for high-scoring or one-sided tail scenarios.
+- 🕸️ **Opponent-aware** — recent form, direct meetings, and bounded multi-opponent paths adjust for strength of schedule instead of treating every opponent as equal.
 
 ## System Architecture
 
@@ -55,7 +57,7 @@ flowchart LR
   C --> N[Ingest: normalize + validate]
   N --> R[Feature rates<br/>attack/defence, corners, cards, per-half]
   R --> P{{Predictors}}
-  P --> P1[Poisson / Dixon-Coles grid]
+  P --> P1[Ensemble / Poisson / Dixon-Coles / NB / Bivariate / Monte Carlo]
   P --> P2[Corners model]
   P --> P3[Cards model]
   P --> P4[Per-half model]
@@ -80,9 +82,17 @@ flowchart TD
     direction TB
     G{"model="}
     G -->|"poisson"| P1[PoissonPredictor]
-    G -->|"dixon_coles (default)"| P2[DixonColesPredictor]
+    G -->|"dixon_coles"| P2[DixonColesPredictor]
+    G -->|"negative_binomial"| P3[NegativeBinomialPredictor]
+    G -->|"bivariate_poisson"| P4[BivariatePoissonPredictor]
+    G -->|"monte_carlo"| P5[MonteCarloPredictor]
+    G -->|"ensemble (default)"| PE[EnsemblePredictor]
     P1 --> SG[[ScorelineGrid]]
     P2 --> SG
+    P3 --> SG
+    P4 --> SG
+    P5 --> SG
+    PE --> SG
     SG --> MK[derive_markets]
   end
 
@@ -113,9 +123,15 @@ flowchart TD
 
 | Stage | Algorithm | Implementation |
 | --- | --- | --- |
-| Feature engineering | Exponential recency weighting + shrinkage-to-prior for small samples | `soccer_prediction/features/rates.py::compute_rates` |
+| Feature engineering | Exponential recency weighting, shrinkage, head-to-head blending, and iterative opponent-network strength adjustment | `soccer_prediction/features/rates.py::compute_rates` |
 | Goal model (`poisson`) | Independent-Poisson outer product over home/away goal expectations | `soccer_prediction/predictors/poisson.py` |
-| Goal model (`dixon_coles`, default) | Poisson grid with a low-score dependence correction (lifts 0-0/1-1/1-0/0-1 mass), falling back to `poisson` if degenerate | `soccer_prediction/predictors/dixon_coles.py` |
+| Goal model (`dixon_coles`) | Poisson grid with a history-adaptive low-score draw correction | `soccer_prediction/predictors/dixon_coles.py` |
+| Goal model (`negative_binomial`) | Overdispersed goal counts with history-fitted dispersion and heavier tails | `soccer_prediction/predictors/negative_binomial.py` |
+| Goal model (`bivariate_poisson`) | Shared tempo process introduces within-match scoring correlation | `soccer_prediction/predictors/bivariate_poisson.py` |
+| Goal model (`monte_carlo`) | Reproducible cagey/open/momentum state simulations with tempo shocks | `soccer_prediction/predictors/monte_carlo.py` |
+| Goal model (`ensemble`, default) | Weighted probability pool of four complementary model families | `soccer_prediction/predictors/ensemble.py` |
+| Robustness analysis | Five-model comparison, agreement, entropy, simulated ranges and tail events | `soccer_prediction/predictors/analysis.py` |
+| Match context | Recent form, direct meetings, A–D–F–Z-style graph paths, and inferred game style | `soccer_prediction/features/context.py` |
 | Market derivation | 1X2/over-under/BTTS/correct-score read directly off the scoreline grid — mutually consistent by construction | `soccer_prediction/predictors/markets.py::derive_markets` |
 | Per-half | Two independent Poisson models (first-half rate from HT goals, second-half rate from FT-minus-HT goals) | `soccer_prediction/predictors/half_time.py` |
 | Corners | Count model on corner-for/against rates; league-average prior fallback when the source has no corner data; minimum = 10th-percentile floor of the fitted distribution | `soccer_prediction/predictors/corners.py` |
@@ -137,7 +153,7 @@ soccer_prediction/
   datasources/            # DataSource protocol + adapters (API-Football, StatsBomb, football-data.co.uk, openfootball, martj42) + cache
   ingest/                  # record normalization and validation
   features/                 # team rate computation (recency-weighted, shrunk)
-  predictors/                 # Predictor protocol + Poisson/Dixon-Coles/corners/cards/half-time/knockout/scorers models
+  predictors/                 # Goal ensembles/simulations + corners/cards/half-time/knockout/scorers models
   models/                        # typed dataclasses: matches, teams, players, predictions
   calibration/                     # walk-forward backtesting + RPS/log-loss/Brier metrics
   cli/                                # Typer app: predict, fetch, backtest
@@ -264,7 +280,7 @@ openfootball carries goals + half-time scores (so scoreline, 1X2, BTTS, over/und
 
 | Command | Purpose | Key options |
 | --- | --- | --- |
-| `soccer-predict predict` | Forecast a fixture | `--home`, `--away`, `--model` (`dixon_coles`/`poisson`), `--source` (`auto`/`bundled_wc2026`/`bundled_swi_col`/…), `--format` (`text`/`json`/`md`/`html`), `--output <file>` |
+| `soccer-predict predict` | Forecast a fixture | `--home`, `--away`, `--model` (`ensemble`/`dixon_coles`/`poisson`/`negative_binomial`/`bivariate_poisson`/`monte_carlo`), `--source` (`auto`/`bundled_wc2026`/…), `--format` (`text`/`json`/`md`/`html`), `--output <file>` |
 | `soccer-predict fetch` | Fetch team history (placeholder wiring) | `--team`, `--competition` |
 | `soccer-predict backtest` | Backtest a model (placeholder wiring) | `--competition`, `--metric` |
 
@@ -276,9 +292,9 @@ The library surface is small and typed:
 
 | Symbol | Where | Purpose |
 | --- | --- | --- |
-| `forecast_fixture(home, away, *, model="dixon_coles", source="auto")` | `soccer_prediction` | Forecast every supported market for a fixture; returns a `MatchForecast`. |
-| `predict_match(home, away, market, *, model="dixon_coles", source="auto")` | `soccer_prediction` | Forecast a single named market. |
-| `MatchForecast` | `soccer_prediction.models` | Result type: `result`, `correct_score`, `over_under`, `btts`, `per_half`, `corners`, `cards`, `knockout`, `scorers`, `history`. |
+| `forecast_fixture(home, away, *, model="ensemble", source="auto")` | `soccer_prediction` | Forecast every supported market for a fixture; returns a `MatchForecast`. |
+| `predict_match(home, away, market, *, model="ensemble", source="auto")` | `soccer_prediction` | Forecast a single named market. |
+| `MatchForecast` | `soccer_prediction.models` | Result type: markets plus `scenario_analysis`, `knockout`, `scorers`, and `history`. |
 | `DataSource`, `register_source` | `soccer_prediction.datasources` | Protocol and decorator for adding a new historical-data adapter. |
 | `Predictor`, `register_model` | `soccer_prediction.predictors` | Protocol and decorator for adding a new scoreline model. |
 
@@ -297,7 +313,7 @@ All are free; see [docs/data-sources.md](docs/data-sources.md) for auth, coverag
 
 ## Prediction Models
 
-See [docs/models.md](docs/models.md). Goal markets come from a single scoreline distribution (independent Poisson, or Dixon-Coles with a low-score correction). Corners use a low-quantile "minimum" plus over/under tails; cards use a Poisson count model; per-half uses two independent half models.
+See [docs/models.md](docs/models.md). Goal markets come from one selected scoreline distribution; the default ensemble pools four complementary algorithms. Reports separately compare five model families and summarize random-scenario ranges and tail risks. Corners use a low-quantile "minimum" plus over/under tails; cards use a Poisson count model; per-half uses two independent half models.
 
 ## Prediction Packages
 
@@ -305,7 +321,8 @@ See [docs/models.md](docs/models.md). Goal markets come from a single scoreline 
 
 | What | Package | Where |
 | --- | --- | --- |
-| Poisson PMF (goal, per-half, card, extra-time models) | stdlib `math` (`math.exp`, `math.factorial`) | `soccer_prediction/predictors/poisson.py::_poisson_pmf` |
+| Poisson/Negative-Binomial/Bivariate PMFs | stdlib `math` | `soccer_prediction/predictors/{poisson,negative_binomial,bivariate_poisson}.py` |
+| Latent-state simulation and stable fixture seeding | stdlib `random`, `hashlib` | `soccer_prediction/predictors/monte_carlo.py` |
 | Penalty-shootout binomial/combinatorics | stdlib `math` (`math.comb`) | `soccer_prediction/predictors/knockout.py::shootout_win_probability` |
 | Log-loss / ranked probability score | stdlib `math` (`math.log`) | `soccer_prediction/calibration/metrics.py` |
 | HTTP fetching for every data-source adapter | stdlib `urllib.request` | `soccer_prediction/datasources/{cache,football_data_csv,international_results,worldcup_open}.py` |
@@ -314,7 +331,7 @@ See [docs/models.md](docs/models.md). Goal markets come from a single scoreline 
 
 The optional `[accel]` extra (`numpy`, `scipy`, `pandas`, `statsmodels`, `penaltyblog`, `statsbombpy`, `requests`) is **not required by anything currently shipped**, with one exception: `statsbombpy` is dynamically imported by the StatsBomb data-source adapter (`soccer_prediction/datasources/statsbomb.py`) to fetch open event data — it is a data-fetching dependency, not a modeling one. The rest of `[accel]` documents a **future upgrade path**, not current behavior:
 
-- `penaltyblog` — a full maximum-likelihood Dixon-Coles fit could replace the current closed-form low-score correction (see [docs/models.md](docs/models.md#goals-dixon-coles-dixon_coles-default)).
+- `penaltyblog` — a full maximum-likelihood Dixon-Coles fit could replace the current closed-form low-score correction (see [docs/models.md](docs/models.md#goals-dixon-coles-dixon_coles)).
 - `statsmodels` / `scipy` — Negative-Binomial (corners are overdispersed) and COM-Poisson (cards are underdispersed) would improve on the current plain-Poisson count models.
 - `numpy` / `pandas` — would matter only if a future model needed vectorized fitting over large histories; today's per-fixture rate computation has no such bottleneck.
 - `requests` is listed but unused; every adapter uses `urllib.request` from the standard library instead.

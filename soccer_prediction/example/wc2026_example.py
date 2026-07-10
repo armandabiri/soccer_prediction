@@ -2,7 +2,7 @@
 
 Loads a small packaged history (no network), registers it as the
 ``bundled_wc2026`` data source, and forecasts a sample fixture end to end
-through the public facade (Dixon-Coles goals, per-half, corners, cards).
+through the public facade (ensemble goals, scenario analysis, per-half, corners, cards).
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ def _factory() -> BundledWorldCupSource:
 
 def run_example() -> str:
     """Forecast the sample fixture from bundled data and print the report."""
-    forecast = forecast_fixture(_SAMPLE_HOME, _SAMPLE_AWAY, model="dixon_coles", source=_SOURCE)
+    forecast = forecast_fixture(_SAMPLE_HOME, _SAMPLE_AWAY, model="ensemble", source=_SOURCE)
     text = render_text(forecast)
     print(text)
     return text

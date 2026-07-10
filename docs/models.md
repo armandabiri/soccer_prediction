@@ -4,15 +4,37 @@ All goal-derived markets come from a single scoreline probability distribution s
 
 ## Team rates
 
-`compute_rates(history)` builds per-team attack/defence goal rates, corner-for/against rates, card rates, and half-time rates, with exponential **recency weighting** and **shrinkage** of small samples toward a global prior — important for sparse international data.
+`compute_rates(history)` builds per-team attack/defence goal rates, corner-for/against rates, card rates, and half-time rates, with configurable exponential **recency weighting** and **shrinkage** of small samples toward a realistic global prior — important for sparse international data. With no history, the prior is 1.35 goals per team rather than a degenerate zero-goal forecast.
+
+By default, forecasting loads the two target histories and the histories of up to ten of their most recent opponents. An eight-pass opponent adjustment propagates strength through paths such as A–D–F–Z: scoring against a strong defence counts more than scoring against a weak one. The graph is bounded by `opponent_network_depth` and `opponent_network_max_teams` to control API use. Direct head-to-head records receive a separate recency-weighted blend capped at 35%, so a small matchup sample cannot overwhelm broader form.
+
+## Goals: robust ensemble (`ensemble`, default)
+
+The default model is a linear probability pool of Dixon-Coles (30%), Negative Binomial (25%), Bivariate Poisson (20%), and Monte Carlo scenarios (25%). Combining models with different failure modes makes the headline grid less sensitive to any single distributional assumption. The weights are normalized and every derived goal market still comes from the same final grid.
 
 ## Goals: independent Poisson (`poisson`)
 
 Estimates home/away goal expectations from team rates and forms the outer-product scoreline grid up to `model.max_goals`. Simple and fast; tends to under-predict draws.
 
-## Goals: Dixon-Coles (`dixon_coles`, default)
+## Goals: Dixon-Coles (`dixon_coles`)
 
-Extends the Poisson grid with a low-score dependence correction that lifts draw mass on 0-0/1-1/1-0/0-1 outcomes, then renormalizes. This is the standard accuracy upgrade for football scorelines (Dixon & Coles, 1997). Falls back to Poisson if fitting is degenerate. When the optional `[accel]` extra with `penaltyblog` is installed, a full maximum-likelihood Dixon-Coles fit can be substituted behind the same interface.
+Extends the Poisson grid with a low-score dependence correction that lifts low-scoring draw mass, then renormalizes. The correction strength adapts to the observed low-draw frequency. This remains a lightweight Dixon-Coles-inspired approximation rather than a full maximum-likelihood fit.
+
+## Goals: Negative Binomial (`negative_binomial`)
+
+Uses a Gamma-Poisson mixture for each team's goals. Dispersion is estimated from the history and bounded for sparse samples. Its heavier tails allocate more probability to scoreless and high-scoring surprises that an equidispersed Poisson model tends to understate.
+
+## Goals: Bivariate Poisson (`bivariate_poisson`)
+
+Adds a shared scoring process to private home and away Poisson processes. The shared component introduces positive within-match goal correlation, representing tempo and game-state effects where an open match raises both teams' scoring chances.
+
+## Goals: latent-state simulation (`monte_carlo`)
+
+Runs 20,000 pure-Python simulations by default. Each draw includes a shared log-normal tempo shock and explicit cagey, open, home-momentum, or away-momentum states. A stable fixture-derived seed makes repeated forecasts reproducible. Configure the run count and seed with `model.scenario_simulations` and `model.random_seed`.
+
+## Robustness diagnostics
+
+Every `MatchForecast` compares Poisson, Dixon-Coles, Negative Binomial, Bivariate Poisson, and Monte Carlo 1X2 estimates. `scenario_analysis` reports the maximum model disagreement, normalized 1X2 entropy, recent-data uncertainty, middle-80% goal ranges, clean sheets, 0-0, five-plus-goal matches, and three-plus-goal winning margins. `matchup_context` adds recency-weighted form, direct meetings, indirect graph paths, and an inferred tempo/width/physicality style based on the goal, corner, and card models. “Model agreement” measures agreement among these assumptions; it is not a guarantee of accuracy.
 
 ## Derived goal markets
 
@@ -20,7 +42,7 @@ From the grid: `home_draw_away()` (1X2), `over_under(line)` (tail sums), `both_t
 
 ## Corners: total and minimum
 
-Per-team corner expectations from corner-for × opponent corner-against rates. Over/under lines are Poisson upper-tail sums `P(total ≥ k)`. The **minimum** is the 10th-percentile floor of the per-team distribution — the smallest count whose cumulative probability reaches ~10%. "Minimum corners" is inference from the fitted count distribution, not a standard betting market; corners are overdispersed, so a Negative-Binomial fit (via the `[accel]` extra) is the natural upgrade.
+Per-team corner expectations from corner-for × opponent corner-against rates. When corner data exists, the same connected-opponent idea iteratively adjusts corner production and concession strength; recent direct meetings receive a capped corner blend. Over/under lines are Poisson upper-tail sums `P(total ≥ k)`. The **minimum** is the 10th-percentile floor of the per-team distribution — the smallest count whose cumulative probability reaches ~10%. "Minimum corners" is inference from the fitted count distribution, not a standard betting market; corners are overdispersed, so a Negative-Binomial count fit is a further upgrade.
 
 ## Cards
 

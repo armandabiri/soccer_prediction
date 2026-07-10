@@ -25,4 +25,4 @@ def test_known_rates() -> None:
 def test_unseen_team_uses_prior() -> None:
     """An unseen team falls back to the global prior rather than raising."""
     rates = compute_rates([]).for_team("Nowhere")
-    assert rates.goals_for >= 0.0
+    assert rates.goals_for > 1.0

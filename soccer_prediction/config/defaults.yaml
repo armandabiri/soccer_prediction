@@ -13,4 +13,7 @@ model:
   time_decay_xi: 0.0039
   recency_window_days: 730
   max_goals: 8
-
+  scenario_simulations: 20000
+  random_seed: 2026
+  opponent_network_depth: 1
+  opponent_network_max_teams: 12

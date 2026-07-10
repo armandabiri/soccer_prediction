@@ -10,8 +10,12 @@ from .prediction import (
     KnockoutPrediction,
     MarketPrediction,
     MatchForecast,
+    MatchupContext,
+    ModelEstimate,
     PerHalfPrediction,
+    ScenarioAnalysis,
     ScorelineGrid,
+    TeamForm,
 )
 from .team import Team, TeamRates
 
@@ -23,12 +27,16 @@ __all__ = [
     "MarketPrediction",
     "Match",
     "MatchForecast",
+    "MatchupContext",
+    "ModelEstimate",
     "PerHalfPrediction",
     "PlayerMarketPrediction",
     "PlayerStats",
     "ScorelineGrid",
+    "ScenarioAnalysis",
     "ScorerPrediction",
     "Team",
+    "TeamForm",
     "TeamMatchStats",
     "TeamRates",
 ]

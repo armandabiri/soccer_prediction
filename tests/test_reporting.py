@@ -15,10 +15,11 @@ def test_json_roundtrip() -> None:
     """JSON export re-parses to the same headline market values and lists history."""
     forecast = forecast_fixture("Brazil", "Argentina", source="bundled_wc2026")
     parsed = json.loads(render_json(forecast))
-    assert parsed["model_name"] == "dixon_coles"
+    assert parsed["model_name"] == "ensemble"
     assert abs(parsed["result"]["probability"] - forecast.result.probability) < 1e-9
     assert abs(parsed["corners"]["total_expected"] - forecast.corners.total_expected) < 1e-9
     assert len(parsed["history"]) == len(forecast.history) > 0
+    assert parsed["scenario_analysis"]["model_estimates"]
 
 
 def test_text_and_markdown_render() -> None:
@@ -29,6 +30,9 @@ def test_text_and_markdown_render() -> None:
     markdown = render_markdown(forecast)
     assert "### Match result (1X2)" in markdown
     assert "### Corners" in markdown
+    assert "### Robustness & random scenarios" in markdown
+    assert "Model comparison" in markdown
+    assert "Form, head-to-head & opponent network" in markdown
 
 
 def test_timestamp_and_history_section() -> None:
@@ -40,6 +44,7 @@ def test_timestamp_and_history_section() -> None:
     for rendered in (text, markdown, html):
         assert _STAMP.search(rendered) is not None
         assert "Historical data used" in rendered
+        assert "random scenarios" in rendered.lower() or "Simulated 80% goal range" in rendered
     # the history table lists the actual teams used
     assert "Brazil" in html
     assert "| Team | Date | Opponent" in markdown

@@ -34,13 +34,16 @@ def _history_table_md(forecast: MatchForecast) -> list[str]:
         "| Team | Date | Opponent | H/A | Score | HT | Corners | Y/R |",
         "| --- | --- | --- | :-: | :-: | :-: | :-: | :-: |",
     ]
-    for record in sorted(forecast.history, key=lambda item: (item.team, item.date)):
+    displayed = sorted(forecast.history, key=lambda item: item.date, reverse=True)[:80]
+    for record in displayed:
         venue = "H" if record.is_home else "A"
         rows.append(
             f"| {record.team} | {record.date.isoformat()} | {record.opponent} | {venue} "
             f"| {record.goals_for}-{record.goals_against} | {record.ht_goals_for}-{record.ht_goals_against} "
             f"| {record.corners_for}-{record.corners_against} | {record.yellows}/{record.reds} |"
         )
+    if len(forecast.history) > len(displayed):
+        rows.extend(["", f"_Showing the newest {len(displayed)} of {len(forecast.history)} network records._"])
     return rows
 
 
@@ -82,6 +85,93 @@ def _knockout_md(forecast: MatchForecast) -> list[str]:
     ]
 
 
+def _scenario_md(forecast: MatchForecast) -> list[str]:
+    analysis = forecast.scenario_analysis
+    if analysis is None:
+        return []
+    home, away = forecast.fixture.home_team, forecast.fixture.away_team
+    rows = [
+        "### Robustness & random scenarios",
+        "",
+        f"- Model agreement: **{analysis.agreement_label}** "
+        f"(maximum 1X2 disagreement {analysis.model_disagreement:.1%})",
+        f"- Recent-data quality: **{analysis.data_quality_label}** "
+        f"(estimated data uncertainty {analysis.data_uncertainty:.0%})",
+        f"- Outcome uncertainty: {analysis.outcome_uncertainty:.0%} "
+        "(0% concentrated on one result, 100% evenly split)",
+        f"- Middle 80% of {analysis.simulations:,} simulated scenarios: "
+        f"{home} {analysis.home_goals_interval[0]}-{analysis.home_goals_interval[1]} goals, "
+        f"{away} {analysis.away_goals_interval[0]}-{analysis.away_goals_interval[1]}, "
+        f"total {analysis.total_goals_interval[0]}-{analysis.total_goals_interval[1]}",
+        f"- Tail scenarios: 5+ goals {analysis.five_plus_goals:.1%}; "
+        f"winning margin of 3+ {analysis.three_plus_goal_margin:.1%}; 0-0 {analysis.scoreless_draw:.1%}",
+        "",
+        "#### Model comparison",
+        "",
+        f"| Model | {home} win | Draw | {away} win | Expected goals |",
+        "| --- | ---: | ---: | ---: | ---: |",
+    ]
+    rows.extend(
+        f"| {item.model_name} | {item.home_win:.1%} | {item.draw:.1%} | {item.away_win:.1%} "
+        f"| {item.home_expected_goals:.2f}-{item.away_expected_goals:.2f} |"
+        for item in analysis.model_estimates
+    )
+    rows.extend(["", "_Simulation intervals describe possible outcomes, not guaranteed bounds._", ""])
+    return rows
+
+
+def _context_md(forecast: MatchForecast) -> list[str]:
+    context = forecast.matchup_context
+    if context is None:
+        return []
+    home, away = forecast.fixture.home_team, forecast.fixture.away_team
+    rows = [
+        "### Form, head-to-head & opponent network",
+        "",
+        "| Team | Matches | Effective recent sample | Pts/match | Goals F-A | Corners | Last five |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | --- |",
+    ]
+    for form in (context.home_form, context.away_form):
+        recent = "; ".join(form.recent_results) or "n/a"
+        rows.append(
+            f"| {form.team} | {form.matches} | {form.effective_matches:.1f} | {form.points_per_match:.2f} "
+            f"| {form.goals_for_per_match:.2f}-{form.goals_against_per_match:.2f} "
+            f"| {form.corners_for_per_match:.2f} | {recent} |"
+        )
+    rows.extend([""])
+    if context.head_to_head_matches:
+        corner_text = (
+            f"{context.head_to_head_average_corners:.2f} average corners"
+            if context.head_to_head_average_corners > 0
+            else "corner data unavailable"
+        )
+        rows.append(
+            f"- Direct meetings: {context.head_to_head_matches} — {home} wins "
+            f"{context.home_head_to_head_wins}, draws {context.head_to_head_draws}, {away} wins "
+            f"{context.away_head_to_head_wins}; {context.head_to_head_average_goals:.2f} average goals; {corner_text}."
+        )
+    else:
+        rows.append("- Direct meetings: none in the loaded history.")
+    rows.append(
+        f"- Opponent network: {context.network_team_count} teams across {context.network_match_count} matches."
+    )
+    if context.connection_paths:
+        paths = "; ".join(" → ".join(path) for path in context.connection_paths)
+        rows.append(f"- Indirect comparison paths: {paths}.")
+    else:
+        rows.append("- Indirect comparison paths: none found within four links.")
+    rows.extend(
+        [
+            f"- Inferred game style: **{context.style_label}**. {context.style_description}",
+            "",
+            "_Effective sample size strongly discounts older matches; network paths adjust schedule strength "
+            "but do not imply transitive wins._",
+            "",
+        ]
+    )
+    return rows
+
+
 def render_text(forecast: MatchForecast, *, generated_at: datetime | None = None) -> str:
     """Render a forecast as readable text."""
     fixture = forecast.fixture
@@ -100,6 +190,34 @@ def render_text(forecast: MatchForecast, *, generated_at: datetime | None = None
         f"Half-time: {half.selection if half else 'n/a'}",
         _history_summary(forecast),
     ]
+    if forecast.scenario_analysis is not None:
+        analysis = forecast.scenario_analysis
+        lines.extend(
+            [
+                f"Model agreement: {analysis.agreement_label} "
+                f"(maximum disagreement {analysis.model_disagreement:.1%})",
+                f"Recent-data quality: {analysis.data_quality_label} "
+                f"(uncertainty {analysis.data_uncertainty:.0%})",
+                f"Simulated 80% goal range: home {analysis.home_goals_interval[0]}-"
+                f"{analysis.home_goals_interval[1]}, away {analysis.away_goals_interval[0]}-"
+                f"{analysis.away_goals_interval[1]}, total {analysis.total_goals_interval[0]}-"
+                f"{analysis.total_goals_interval[1]} ({analysis.simulations:,} scenarios)",
+                f"Tail scenarios: 5+ goals {analysis.five_plus_goals:.1%}, "
+                f"3+ goal margin {analysis.three_plus_goal_margin:.1%}",
+            ]
+        )
+    if forecast.matchup_context is not None:
+        context = forecast.matchup_context
+        paths = "; ".join(" -> ".join(path) for path in context.connection_paths) or "none"
+        lines.extend(
+            [
+                f"Game style: {context.style_label}",
+                f"Head-to-head: {context.head_to_head_matches} meetings "
+                f"({fixture.home_team} {context.home_head_to_head_wins} wins, "
+                f"draws {context.head_to_head_draws}, {fixture.away_team} {context.away_head_to_head_wins} wins)",
+                f"Opponent network: {context.network_team_count} teams, paths: {paths}",
+            ]
+        )
     if forecast.knockout is not None:
         knockout = forecast.knockout
         home_team, away_team = fixture.home_team, fixture.away_team
@@ -142,6 +260,8 @@ def render_markdown(forecast: MatchForecast, *, generated_at: datetime | None = 
         f"| Draw | {draw_p:.1%} |",
         f"| {away} win | {away_p:.1%} |",
         "",
+        *_scenario_md(forecast),
+        *_context_md(forecast),
         *_knockout_md(forecast),
         "### Goals",
         f"- Over 2.5 goals: {forecast.over_under.probability:.1%}",

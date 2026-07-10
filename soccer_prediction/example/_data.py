@@ -8,7 +8,7 @@ from datetime import UTC, date, datetime
 from importlib import resources
 from typing import Any, cast
 
-from soccer_prediction.models import PlayerStats, TeamMatchStats
+from soccer_prediction.models import PlayerGame, PlayerStats, TeamMatchStats
 
 __all__ = ["load_packaged_history", "load_packaged_players"]
 
@@ -50,7 +50,30 @@ def _row_to_player(row: Mapping[str, Any]) -> PlayerStats:
         recent_appearances=_optional_int(row.get("recent_appearances")),
         recent_goals=_optional_int(row.get("recent_goals")),
         recent_assists=_optional_int(row.get("recent_assists")),
+        recent_games=_recent_games(row.get("recent_games")),
     )
+
+
+def _recent_games(value: object) -> tuple[PlayerGame, ...]:
+    """Parse compact ``[played, goals, assists]`` rows into typed player games.
+
+    Each entry is a 3-element list ordered oldest-to-newest; ``played`` is 0/1
+    (or a bool) and a not-played game carries no goals or assists.
+    """
+    if value is None:
+        return ()
+    if not isinstance(value, list):
+        raise TypeError(f"expected a list of recent games, got {type(value).__name__}")
+    games: list[PlayerGame] = []
+    for raw in cast("list[object]", value):
+        if not isinstance(raw, list):
+            raise ValueError("each recent game must be a [played, goals, assists] triple")
+        entry = cast("list[Any]", raw)
+        if len(entry) != 3:
+            raise ValueError("each recent game must be a [played, goals, assists] triple")
+        played, goals, assists = entry
+        games.append(PlayerGame(played=bool(played), goals=int(goals), assists=int(assists)))
+    return tuple(games)
 
 
 def _optional_int(value: object) -> int | None:

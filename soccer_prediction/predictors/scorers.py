@@ -1,9 +1,13 @@
 """Player goalscorer and assist market predictor.
 
 Distributes each team's expected goals using shrinkage-adjusted production per
-appearance, optionally blending genuine recent form. It then derives separate
-score, assist, combined-involvement, and first-scorer probabilities. This is
-not a minutes or lineup model; treat the numbers as indicative.
+appearance, optionally blending genuine recent form. Production is then weighted
+by recent availability: a player absent from the latest games has their markets
+damped (and their share redistributed to teammates who are actually featuring),
+because whether someone played the last five matches is a strong signal for
+whether they will play, and score, in this one. It then derives separate score,
+assist, combined-involvement, and first-scorer probabilities. This is not a
+minutes or lineup model; treat the numbers as indicative.
 """
 
 from __future__ import annotations
@@ -25,6 +29,8 @@ _PRIOR_APPEARANCES = 12.0
 _RECENT_PRIOR_APPEARANCES = 5.0
 _RECENT_WEIGHT = 0.55
 _ASSISTED_GOAL_SHARE = 0.72
+_AVAILABILITY_WINDOW = 5
+_MIN_AVAILABILITY = 0.15
 _POSITION_RATES = {
     "FW": (0.28, 0.16),
     "MF": (0.10, 0.18),
@@ -67,12 +73,15 @@ def _team_predictions(
     total_xg: float,
     p_no_goal: float,
 ) -> list[PlayerMarketPrediction]:
-    goal_rates = [_production_rate(player, "goals") for player in players]
-    assist_rates = [_production_rate(player, "assists") for player in players]
+    availabilities = [_availability(player) for player in players]
+    goal_rates = [_production_rate(p, "goals") * a for p, a in zip(players, availabilities, strict=True)]
+    assist_rates = [_production_rate(p, "assists") * a for p, a in zip(players, availabilities, strict=True)]
     total_goal_rate = sum(goal_rates)
     total_assist_rate = sum(assist_rates)
     out: list[PlayerMarketPrediction] = []
-    for player, goal_rate, assist_rate in zip(players, goal_rates, assist_rates, strict=True):
+    for player, goal_rate, assist_rate, availability in zip(
+        players, goal_rates, assist_rates, availabilities, strict=True
+    ):
         goal_share = goal_rate / total_goal_rate if total_goal_rate else 0.0
         assist_share = assist_rate / total_assist_rate if total_assist_rate else 0.0
         expected_goals = team_xg * goal_share
@@ -98,9 +107,26 @@ def _team_predictions(
                 recent_goals=recent_goals,
                 recent_assists=recent_assists,
                 recent_form_estimated=estimated,
+                recent_games=player.recent_games,
+                recent_availability=availability,
+                played_last_five=player.played_in_last(_AVAILABILITY_WINDOW),
             )
         )
     return out
+
+
+def _availability(player: PlayerStats) -> float:
+    """Weight a player's markets by how often they featured in the latest games.
+
+    A full recent presence returns 1.0; a player absent from every game in the
+    window is floored at ``_MIN_AVAILABILITY`` (they can still appear off the
+    bench). Without match-level ``recent_games`` no adjustment is made.
+    """
+    window = player.recent_games[-_AVAILABILITY_WINDOW:]
+    if not window:
+        return 1.0
+    played = sum(1 for game in window if game.played)
+    return _MIN_AVAILABILITY + (1.0 - _MIN_AVAILABILITY) * (played / len(window))
 
 
 def _production_rate(player: PlayerStats, kind: Literal["goals", "assists"]) -> float:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from soccer_prediction.models import PlayerStats, ScorelineGrid
+from soccer_prediction.models import PlayerGame, PlayerStats, ScorelineGrid
 from soccer_prediction.predictors import predict_scorers
 from soccer_prediction.predictors.scorers import expected_goals_from_grid
 from soccer_prediction.public import forecast_fixture
@@ -83,6 +83,59 @@ def test_forecast_includes_scorers() -> None:
     assert "Recent scoring comparison — all 20 listed players" in html
     assert ">Score</th>" in html
     assert ">Assist</th>" in html
+
+
+def test_recent_games_derive_aggregate_recent_form() -> None:
+    """A recent_games timeline fills the recent_* aggregates from featured games."""
+    player = PlayerStats(
+        "X",
+        "H",
+        "FW",
+        50,
+        10,
+        5,
+        recent_games=(PlayerGame(True, 1, 1), PlayerGame(False), PlayerGame(True, 0, 1)),
+    )
+    assert player.recent_appearances == 2
+    assert player.recent_goals == 1
+    assert player.recent_assists == 2
+    assert player.played_in_last(2) == 1  # oldest-to-newest: last two are DNP then a start
+
+
+def test_player_game_rejects_involvement_without_playing() -> None:
+    """A game the player missed cannot record goals or assists."""
+    with pytest.raises(ValueError):
+        PlayerGame(played=False, goals=1)
+
+
+def test_recent_absence_damps_markets_and_redistributes_share() -> None:
+    """Missing the last five games damps a player's markets below an ever-present twin."""
+    ever_present = tuple(PlayerGame(True, 1, 0) for _ in range(10))
+    recent_absentee = (*[PlayerGame(True, 1, 0)] * 5, *[PlayerGame(False)] * 5)
+    players = [
+        PlayerStats("Present", "H", "FW", 50, 10, 5, recent_games=ever_present),
+        PlayerStats("Absent", "H", "FW", 50, 10, 5, recent_games=recent_absentee),
+    ]
+    by_name = {p.player: p for p in predict_scorers(_grid(), players, []).players}
+    assert by_name["Absent"].played_last_five == 0
+    assert by_name["Present"].played_last_five == 5
+    assert by_name["Absent"].recent_availability < by_name["Present"].recent_availability
+    assert by_name["Absent"].score_probability < by_name["Present"].score_probability
+
+
+def test_report_renders_per_game_circles_and_availability() -> None:
+    """The bundled squad exposes per-game circles, absences, and availability notes."""
+    forecast = forecast_fixture("Spain", "Belgium", source="bundled_esp_bel")
+    assert forecast.scorers is not None
+    names = {player.player for player in forecast.scorers.players}
+    assert {"Mikel Oyarzabal", "Charles De Ketelaere"} <= names  # recent scorers now in the squad
+    de_bruyne = next(p for p in forecast.scorers.players if p.player == "Kevin De Bruyne")
+    assert de_bruyne.played_last_five <= 1
+    assert de_bruyne.recent_availability < 1.0
+    html = render_html(forecast)
+    assert 'class="form-dots"' in html
+    assert "gdot dnp" in html  # at least one did-not-play circle is rendered
+    assert "played 1/5 recent" in html
 
 
 def test_forecast_without_players_has_no_scorers() -> None:

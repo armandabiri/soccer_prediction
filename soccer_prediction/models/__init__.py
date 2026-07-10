@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .match import Fixture, Match, TeamMatchStats
-from .player import PlayerMarketPrediction, PlayerStats, ScorerPrediction
+from .player import PlayerGame, PlayerMarketPrediction, PlayerStats, ScorerPrediction
 from .prediction import (
     CardsPrediction,
     CornersPrediction,
@@ -30,6 +30,7 @@ __all__ = [
     "MatchupContext",
     "ModelEstimate",
     "PerHalfPrediction",
+    "PlayerGame",
     "PlayerMarketPrediction",
     "PlayerStats",
     "ScorelineGrid",

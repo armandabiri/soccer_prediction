@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from html import escape
 
-from soccer_prediction.models import MatchForecast
+from soccer_prediction.models import MatchForecast, PlayerMarketPrediction
 
 _CSS = """
 :root { color-scheme: light dark; --bg:#f5f7f4; --card:#ffffff; --ink:#12160f; --muted:#586152;
@@ -41,13 +41,28 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .formbar { position:relative; height:7px; min-width:120px; border-radius:6px; background:var(--bar); overflow:hidden; }
 .formbar > span { position:absolute; inset:0 auto 0 0; border-radius:6px; }
 .formlabel { display:block; margin-top:4px; color:var(--muted); font-size:.75rem; white-space:nowrap; }
-.player-form-chart { display:grid; gap:7px; padding:10px 0 2px; }
-.player-form-row { display:grid; grid-template-columns:minmax(135px,1.15fr) minmax(180px,3fr) 100px;
+.player-form-chart { display:grid; gap:7px; padding:10px 0 2px; overflow-x:auto; }
+.player-form-row { display:grid;
+  grid-template-columns:minmax(120px,1.1fr) auto minmax(120px,2.2fr) 92px;
   gap:10px; align-items:center; }
 .player-form-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .player-form-track { height:12px; border-radius:7px; background:var(--bar); overflow:hidden; }
 .player-form-fill { height:100%; border-radius:7px; }
 .player-form-value { text-align:right; color:var(--muted); font-size:.8rem; font-variant-numeric:tabular-nums; }
+.player-form-value .avail { display:block; font-size:.7rem; }
+.player-form-value .avail.low { color:#d97706; font-weight:600; }
+.form-dots { display:inline-flex; gap:3px; }
+.gdot { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto;
+  width:17px; height:17px; border-radius:50%; border:1.5px solid var(--line); color:transparent;
+  font-size:.6rem; font-weight:700; font-variant-numeric:tabular-nums; }
+.gdot.dnp { background:var(--muted); border-color:var(--muted); opacity:.45; }
+.gdot.blank { background:transparent; }
+.gdot.goal { background:var(--c); border-color:var(--c); color:#fff; }
+.gdot.assist { background:color-mix(in srgb,var(--c) 25%,transparent); border-color:var(--c); color:var(--ink); }
+.dot-legend { display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin:2px 0 0;
+  color:var(--muted); font-size:.75rem; }
+.dot-legend .gdot { color:inherit; }
+.dot-legend span { display:inline-flex; align-items:center; gap:5px; }
 .ci-chart { display:grid; gap:12px; padding:12px 0 4px; }
 .ci-row { display:grid; grid-template-columns:minmax(120px,1fr) minmax(220px,3fr) 145px; gap:12px; align-items:center; }
 .ci-track { position:relative; height:14px; border-radius:8px; background:var(--bar); }
@@ -114,7 +129,9 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .heat-gradient { height:10px; border-radius:6px;
   background:linear-gradient(90deg,var(--away),var(--draw),var(--home)); }
 .heat-labels { display:flex; justify-content:space-between; color:var(--muted); font-size:.72rem; margin-top:3px; }
-@media (max-width:600px) { .player-form-row { grid-template-columns:minmax(105px,1fr) minmax(100px,2fr) 76px; } }
+@media (max-width:600px) {
+  .player-form-row { grid-template-columns:minmax(96px,1fr) auto minmax(70px,1.4fr) 66px; }
+  .gdot { width:14px; height:14px; font-size:.5rem; border-width:1px; } }
 @media (max-width:600px) { .ci-row { grid-template-columns:90px minmax(100px,2fr) 112px; } }
 @media (max-width:600px) { .model-row { grid-template-columns:105px minmax(210px,1fr); }
   .model-chart { overflow-x:auto; }
@@ -177,6 +194,36 @@ def _count(value: float) -> str:
     return f"{value:.1f}".rstrip("0").rstrip(".")
 
 
+def _form_dots(player: PlayerMarketPrediction, color: str) -> str:
+    """Ten circles, one per recent game (oldest first): solid grey means the
+    player did not feature; a filled colour circle shows goals+assists that game."""
+    cells: list[str] = []
+    for game in player.recent_games:
+        if not game.played:
+            cells.append('<span class="gdot dnp" title="Did not play"></span>')
+            continue
+        involvements = game.goals + game.assists
+        if involvements == 0:
+            cells.append('<span class="gdot blank" title="Played — no goal or assist"></span>')
+            continue
+        kind = "goal" if game.goals else "assist"
+        title = f"{game.goals}G · {game.assists}A"
+        cells.append(f'<span class="gdot {kind}" style="--c:{color}" title="{title}">{involvements}</span>')
+    if not cells:
+        return '<div class="form-dots"></div>'
+    aria = f"Last {len(player.recent_games)} games oldest to newest; played {player.played_last_five} of the last 5"
+    return f'<div class="form-dots" role="img" aria-label="{escape(aria, quote=True)}">{"".join(cells)}</div>'
+
+
+def _availability_note(player: PlayerMarketPrediction) -> str:
+    """A "played N/5 recent" tag, highlighted when the player is barely featuring."""
+    if not player.recent_games:
+        return ""
+    played = player.played_last_five
+    cls = " low" if played <= 2 else ""
+    return f'<span class="avail{cls}">played {played}/5 recent</span>'
+
+
 def _scorers_section(forecast: MatchForecast) -> str:
     scorers = forecast.scorers
     if scorers is None or not scorers.players:
@@ -193,15 +240,27 @@ def _scorers_section(forecast: MatchForecast) -> str:
         chart_rows.append(
             f'<div class="player-form-row"><div class="player-form-name" title="{escape(player.player, quote=True)}">'
             f"{_dot(color)}{escape(player.player)}</div>"
+            f"{_form_dots(player, color)}"
             f'<div class="player-form-track" role="img" aria-label="{escape(label, quote=True)}">'
             f'<div class="player-form-fill" style="width:{width:.1f}%;background:{color}"></div></div>'
-            f'<div class="player-form-value">{escape(label)}</div></div>'
+            f'<div class="player-form-value">{escape(label)}{_availability_note(player)}</div></div>'
         )
+    dot_legend = (
+        '<div class="dot-legend">'
+        '<span><span class="gdot goal" style="--c:var(--accent)"></span>goal</span>'
+        '<span><span class="gdot assist" style="--c:var(--accent)"></span>assist only</span>'
+        '<span><span class="gdot blank"></span>played, blank</span>'
+        '<span><span class="gdot dnp"></span>did not play</span>'
+        "</div>"
+    )
     chart = (
         f'<h3>Recent scoring comparison — all {len(chart_players)} listed players</h3><div class="card">'
-        f'<div class="player-form-chart">{"".join(chart_rows)}</div>'
-        f'<p class="foot">Each bar compares goals over the latest available sample of up to 20 appearances. '
-        f"Bars are scaled to the leading player. * marks an aggregate-rate estimate.</p></div>"
+        f'<div class="player-form-chart">{"".join(chart_rows)}</div>{dot_legend}'
+        f'<p class="foot">The ten circles left of each bar are that player’s last ten games, oldest first; '
+        f"the number is goals+assists that game and a solid grey circle marks a game they did not play. "
+        f'Bars compare goals over the latest available sample of up to 20 appearances, scaled to the leader. '
+        f"A thin recent presence (see “played N/5”) damps the player’s predicted markets below; "
+        f"* marks an aggregate-rate estimate.</p></div>"
     )
     rows: list[str] = []
     for player in scorers.players[:12]:
@@ -239,7 +298,9 @@ def _scorers_section(forecast: MatchForecast) -> str:
         f"Score and Assist are separate anytime probabilities; Score/assist is either event; First is to open "
         f"the scoring. The bar is goals per appearance over up to 20 recent games. * means an up-to-20 equivalent "
         f"estimated from aggregate career totals because the source has no match-level recent form. Probabilities "
-        f"use position-shrunk per-appearance rates and assume the player participates.</p></div>"
+        f"use position-shrunk per-appearance rates, then weight each player by how many of the last five games "
+        f"they featured in, so someone absent from recent squads is damped and cedes share to teammates who "
+        f"are playing.</p></div>"
     )
 
 

@@ -267,6 +267,7 @@ class MatchForecast:
     knockout: KnockoutPrediction | None = None
     scenario_analysis: ScenarioAnalysis | None = None
     matchup_context: MatchupContext | None = None
+    ensemble_scoreline: ScorelineGrid | None = None
 
 
 def example_usage() -> None:

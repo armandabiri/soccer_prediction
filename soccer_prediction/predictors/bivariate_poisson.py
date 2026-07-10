@@ -27,9 +27,10 @@ class BivariatePoissonPredictor:
 
     def fit(self, history: Sequence[TeamMatchStats], *, as_of: date | None = None) -> None:
         """Fit goal rates and estimate positive within-match goal covariance."""
-        self._rates = compute_rates(history, today=as_of)
+        visible_history = tuple(record for record in history if as_of is None or record.date <= as_of)
+        self._rates = compute_rates(visible_history, today=as_of)
         if self._fixed_shared_share is None:
-            self.shared_share = _estimate_shared_share(history)
+            self.shared_share = _estimate_shared_share(visible_history)
 
     def predict_scoreline(self, home: str, away: str, *, neutral_venue: bool = False) -> ScorelineGrid:
         """Predict a correlated scoreline grid."""

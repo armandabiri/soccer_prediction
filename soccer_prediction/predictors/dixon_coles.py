@@ -26,24 +26,16 @@ class DixonColesPredictor:
 
     def fit(self, history: Sequence[TeamMatchStats], *, as_of: date | None = None) -> None:
         """Fit the fallback Poisson model."""
-        self._poisson.fit(history, as_of=as_of)
+        visible_history = tuple(record for record in history if as_of is None or record.date <= as_of)
+        self._poisson.fit(visible_history, as_of=as_of)
         if self._fixed_draw_boost is None:
-            self.draw_boost = _estimate_draw_boost(history)
+            self.draw_boost = _estimate_draw_boost(visible_history)
 
     def predict_scoreline(self, home: str, away: str, *, neutral_venue: bool = False) -> ScorelineGrid:
         """Predict a scoreline grid with low-score dependence."""
         base = self._poisson.predict_scoreline(home, away, neutral_venue=neutral_venue)
         rows = [list(row) for row in base.probabilities]
-        home_lambda = sum(
-            home_goals * probability
-            for home_goals, row in enumerate(base.probabilities)
-            for probability in row
-        )
-        away_lambda = sum(
-            away_goals * probability
-            for row in base.probabilities
-            for away_goals, probability in enumerate(row)
-        )
+        home_lambda, away_lambda = self._poisson.goal_expectations(home, away, neutral_venue=neutral_venue)
         rho = -min(0.18, max(0.0, self.draw_boost))
         factors = {
             (0, 0): 1.0 - home_lambda * away_lambda * rho,

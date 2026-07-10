@@ -96,6 +96,7 @@ def forecast_fixture(
         scorers=_load_scorers(source, home, away, correct_score),
         knockout=predict_knockout(correct_score),
         scenario_analysis=scenario_analysis,
+        ensemble_scoreline=model_run.grids["ensemble"],
         matchup_context=build_matchup_context(
             history,
             home,

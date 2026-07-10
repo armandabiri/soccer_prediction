@@ -17,6 +17,7 @@ from soccer_prediction.reporting.html_components import (
     _team_legend,
 )
 from soccer_prediction.reporting.html_context import context_section
+from soccer_prediction.reporting.html_model_comparison import ensemble_heatmap_section, model_comparison_section
 
 __all__ = ["render_html", "example_usage", "main"]
 
@@ -31,6 +32,8 @@ def render_html(forecast: MatchForecast, *, title: str | None = None, generated_
         _tiles(forecast, home, away, home_p, draw_p, away_p),
         _result_section(home, away, home_p, draw_p, away_p),
         confidence_interval_section(forecast),
+        model_comparison_section(forecast),
+        ensemble_heatmap_section(forecast),
         scenario_section(forecast),
         context_section(forecast),
         _knockout_section(forecast, home, away),
@@ -49,7 +52,7 @@ def render_html(forecast: MatchForecast, *, title: str | None = None, generated_
         f'<meta name="viewport" content="width=device-width, initial-scale=1">'
         f'<title>{heading}</title><style>{_CSS}</style></head><body><div class="wrap">'
         f"<h1>{heading}</h1>"
-        f'<p class="sub">Model: <span class="pill">{escape(forecast.model_name)}</span> '
+        f'<p class="sub">Selected model: <span class="pill">{escape(forecast.model_name)}</span> '
         f"&nbsp; Generated: {stamp} &nbsp; Data: {notes}</p>"
         f"{_team_legend([forecast.fixture.home_team, forecast.fixture.away_team])}"
         f"{body}"
@@ -176,13 +179,13 @@ def _half_section(forecast: MatchForecast, home: str, away: str) -> str:
     ht = per_half.half_time_result.selection if per_half.half_time_result else "n/a"
     rows = (
         f'<tr><td>1st half - {home} scores</td><td class="n">'
-        f'{per_half.first_half_home_expected:.2f} xG</td><td class="n">{_pct(first_home)}</td></tr>'
+        f'{per_half.first_half_home_expected:.2f} model goals</td><td class="n">{_pct(first_home)}</td></tr>'
         f'<tr><td>1st half - {away} scores</td><td class="n">'
-        f'{per_half.first_half_away_expected:.2f} xG</td><td class="n">{_pct(first_away)}</td></tr>'
+        f'{per_half.first_half_away_expected:.2f} model goals</td><td class="n">{_pct(first_away)}</td></tr>'
         f'<tr><td>2nd half - {home} scores</td><td class="n">'
-        f'{per_half.second_half_home_expected:.2f} xG</td><td class="n">{_pct(second_home)}</td></tr>'
+        f'{per_half.second_half_home_expected:.2f} model goals</td><td class="n">{_pct(second_home)}</td></tr>'
         f'<tr><td>2nd half - {away} scores</td><td class="n">'
-        f'{per_half.second_half_away_expected:.2f} xG</td><td class="n">{_pct(second_away)}</td></tr>'
+        f'{per_half.second_half_away_expected:.2f} model goals</td><td class="n">{_pct(second_away)}</td></tr>'
         f'<tr><td>Half-time result (likeliest)</td><td class="n">{escape(ht)}</td><td class="n">-</td></tr>'
     )
     header = '<thead><tr><th>Segment</th><th class="n">Expected</th><th class="n">Probability</th></tr></thead>'

@@ -17,7 +17,7 @@ def test_forecast_fixture_shape() -> None:
     assert forecast.corners.total_expected > 0.0
     assert forecast.model_name == "ensemble"
     assert forecast.scenario_analysis is not None
-    assert len(forecast.scenario_analysis.model_estimates) == 5
+    assert len(forecast.scenario_analysis.model_estimates) == 6
     assert forecast.scenario_analysis.simulations > 0
 
 

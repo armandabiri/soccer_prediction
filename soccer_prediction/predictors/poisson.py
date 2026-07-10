@@ -28,8 +28,12 @@ class PoissonPredictor:
 
     def predict_scoreline(self, home: str, away: str, *, neutral_venue: bool = False) -> ScorelineGrid:
         """Predict a normalized scoreline grid."""
-        home_lambda, away_lambda = expected_goals(self._rates, home, away, neutral_venue=neutral_venue)
+        home_lambda, away_lambda = self.goal_expectations(home, away, neutral_venue=neutral_venue)
         return poisson_grid(home_lambda, away_lambda, self.max_goals)
+
+    def goal_expectations(self, home: str, away: str, *, neutral_venue: bool = False) -> tuple[float, float]:
+        """Return fitted home and away mean-goal parameters."""
+        return expected_goals(self._rates, home, away, neutral_venue=neutral_venue)
 
     def predict_market(
         self, home: str, away: str, market: str, *, neutral_venue: bool = False

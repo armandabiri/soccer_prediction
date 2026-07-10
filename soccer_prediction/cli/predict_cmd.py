@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from datetime import date
+from pathlib import Path
 from typing import Annotated, Literal
 
 import typer
@@ -27,18 +27,22 @@ def cmd_predict(
         ),
     ] = "ensemble",
     source: Annotated[str, typer.Option("--source")] = "auto",
-    as_of: Annotated[date | None, typer.Option("--as-of", help="Forecast date (YYYY-MM-DD)")] = None,
+    as_of: Annotated[str | None, typer.Option("--as-of", help="Forecast date (YYYY-MM-DD)")] = None,
     neutral_venue: Annotated[bool, typer.Option("--neutral-venue", help="Remove home-field effects")] = False,
     output_format: Annotated[OutputFormat, typer.Option("--format")] = "text",
     output: Annotated[Path | None, typer.Option("--output", help="Write the report to a file")] = None,
 ) -> None:
     """Forecast a fixture and print or write a report in the chosen format."""
+    try:
+        forecast_date = date.fromisoformat(as_of) if as_of else None
+    except ValueError as error:
+        raise typer.BadParameter("must use YYYY-MM-DD", param_hint="--as-of") from error
     forecast = forecast_fixture(
         home,
         away,
         model=model,
         source=source,
-        as_of=as_of,
+        as_of=forecast_date,
         neutral_venue=neutral_venue,
     )
     if output_format == "json":

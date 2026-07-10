@@ -49,8 +49,9 @@ class EnsemblePredictor:
 
     def fit(self, history: Sequence[TeamMatchStats], *, as_of: date | None = None) -> None:
         """Calibrate weights on a bounded holdout, then fit components on all prior data."""
+        visible_history = tuple(record for record in history if as_of is None or record.date <= as_of)
         if not self._custom_weights:
-            calibration = _calibrated_weights(history)
+            calibration = _calibrated_weights(visible_history)
             self.weights = calibration[0]
             self.validation_log_losses = calibration[1]
             self.validation_matches = calibration[2]
@@ -59,7 +60,7 @@ class EnsemblePredictor:
             self.weight_method = calibration[5]
         self._models = _new_models(self.weights)
         for model in self._models.values():
-            model.fit(history, as_of=as_of)
+            model.fit(visible_history, as_of=as_of)
 
     def predict_component_grids(
         self,

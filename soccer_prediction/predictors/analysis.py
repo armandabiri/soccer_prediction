@@ -263,7 +263,7 @@ def _data_uncertainty(
         return sum(
             math.exp(-xi * max((today - record.date).days, 0))
             for record in history
-            if record.team.casefold() == team.casefold()
+            if record.team.casefold() == team.casefold() and record.date <= today
         )
 
     evidence = min(effective_matches(home), effective_matches(away))

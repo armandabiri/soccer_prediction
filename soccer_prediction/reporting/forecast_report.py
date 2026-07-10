@@ -7,6 +7,7 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 
 from soccer_prediction.models import MatchForecast
+from soccer_prediction.reporting.model_analysis import model_analysis_markdown, model_analysis_text
 
 __all__ = ["render_json", "render_markdown", "render_text", "example_usage", "main"]
 
@@ -95,53 +96,6 @@ def _knockout_md(forecast: MatchForecast) -> list[str]:
     ]
 
 
-def _scenario_md(forecast: MatchForecast) -> list[str]:
-    analysis = forecast.scenario_analysis
-    if analysis is None:
-        return []
-    home, away = forecast.fixture.home_team, forecast.fixture.away_team
-    home_probability, draw_probability, away_probability = forecast.correct_score.home_draw_away()
-    rows = [
-        "### Robustness & random scenarios",
-        "",
-        f"- Model agreement: **{analysis.agreement_label}** "
-        f"(maximum 1X2 disagreement {analysis.model_disagreement:.1%})",
-        f"- Recent-data quality: **{analysis.data_quality_label}** "
-        f"(estimated data uncertainty {analysis.data_uncertainty:.0%})",
-        f"- Outcome uncertainty: {analysis.outcome_uncertainty:.0%} "
-        "(0% concentrated on one result, 100% evenly split)",
-        f"- Middle 80% of {analysis.simulations:,} simulated scenarios: "
-        f"{home} {analysis.home_goals_interval[0]}-{analysis.home_goals_interval[1]} goals, "
-        f"{away} {analysis.away_goals_interval[0]}-{analysis.away_goals_interval[1]}, "
-        f"total {analysis.total_goals_interval[0]}-{analysis.total_goals_interval[1]}",
-        f"- Tail scenarios: 5+ goals {analysis.five_plus_goals:.1%}; "
-        f"winning margin of 3+ {analysis.three_plus_goal_margin:.1%}; 0-0 {analysis.scoreless_draw:.1%}",
-        "",
-        f"#### Result confidence intervals ({analysis.confidence_level:.0%})",
-        "",
-        "| Outcome | Estimate | Interval |",
-        "| --- | ---: | ---: |",
-        f"| {home} win | {home_probability:.1%} "
-        f"| {analysis.home_win_interval[0]:.1%}–{analysis.home_win_interval[1]:.1%} |",
-        f"| Draw | {draw_probability:.1%} "
-        f"| {analysis.draw_interval[0]:.1%}–{analysis.draw_interval[1]:.1%} |",
-        f"| {away} win | {away_probability:.1%} "
-        f"| {analysis.away_win_interval[0]:.1%}–{analysis.away_win_interval[1]:.1%} |",
-        "",
-        "#### Model comparison",
-        "",
-        f"| Model | {home} win | Draw | {away} win | Expected goals |",
-        "| --- | ---: | ---: | ---: | ---: |",
-    ]
-    rows.extend(
-        f"| {item.model_name} | {item.home_win:.1%} | {item.draw:.1%} | {item.away_win:.1%} "
-        f"| {item.home_expected_goals:.2f}-{item.away_expected_goals:.2f} |"
-        for item in analysis.model_estimates
-    )
-    rows.extend(["", "_Simulation intervals describe possible outcomes, not guaranteed bounds._", ""])
-    return rows
-
-
 def _context_md(forecast: MatchForecast) -> list[str]:
     context = forecast.matchup_context
     if context is None:
@@ -216,28 +170,7 @@ def render_text(forecast: MatchForecast, *, generated_at: datetime | None = None
         f"Half-time: {half.selection if half else 'n/a'}",
         _history_summary(forecast),
     ]
-    if forecast.scenario_analysis is not None:
-        analysis = forecast.scenario_analysis
-        home_probability, draw_probability, away_probability = forecast.correct_score.home_draw_away()
-        lines.extend(
-            [
-                f"Model agreement: {analysis.agreement_label} "
-                f"(maximum disagreement {analysis.model_disagreement:.1%})",
-                f"Recent-data quality: {analysis.data_quality_label} "
-                f"(uncertainty {analysis.data_uncertainty:.0%})",
-                f"Simulated 80% goal range: home {analysis.home_goals_interval[0]}-"
-                f"{analysis.home_goals_interval[1]}, away {analysis.away_goals_interval[0]}-"
-                f"{analysis.away_goals_interval[1]}, total {analysis.total_goals_interval[0]}-"
-                f"{analysis.total_goals_interval[1]} ({analysis.simulations:,} scenarios)",
-                f"Tail scenarios: 5+ goals {analysis.five_plus_goals:.1%}, "
-                f"3+ goal margin {analysis.three_plus_goal_margin:.1%}",
-                f"Result 80% intervals: home {home_probability:.1%} "
-                f"({analysis.home_win_interval[0]:.1%}-{analysis.home_win_interval[1]:.1%}), "
-                f"draw {draw_probability:.1%} ({analysis.draw_interval[0]:.1%}-{analysis.draw_interval[1]:.1%}), "
-                f"away {away_probability:.1%} "
-                f"({analysis.away_win_interval[0]:.1%}-{analysis.away_win_interval[1]:.1%})",
-            ]
-        )
+    lines.extend(model_analysis_text(forecast))
     if forecast.matchup_context is not None:
         context = forecast.matchup_context
         paths = "; ".join(" -> ".join(path) for path in context.connection_paths) or "none"
@@ -298,7 +231,7 @@ def render_markdown(forecast: MatchForecast, *, generated_at: datetime | None = 
         f"| Draw | {draw_p:.1%} |",
         f"| {away} win | {away_p:.1%} |",
         "",
-        *_scenario_md(forecast),
+        *model_analysis_markdown(forecast),
         *_context_md(forecast),
         *_knockout_md(forecast),
         "### Goals",

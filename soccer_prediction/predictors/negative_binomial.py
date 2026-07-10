@@ -27,9 +27,10 @@ class NegativeBinomialPredictor:
 
     def fit(self, history: Sequence[TeamMatchStats], *, as_of: date | None = None) -> None:
         """Fit rates and estimate the Gamma-Poisson dispersion from observed goals."""
-        self._rates = compute_rates(history, today=as_of)
+        visible_history = tuple(record for record in history if as_of is None or record.date <= as_of)
+        self._rates = compute_rates(visible_history, today=as_of)
         if self._fixed_dispersion is None:
-            self.dispersion = _estimate_dispersion(history)
+            self.dispersion = _estimate_dispersion(visible_history)
 
     def predict_scoreline(self, home: str, away: str, *, neutral_venue: bool = False) -> ScorelineGrid:
         """Predict a grid with heavier tails than independent Poisson."""

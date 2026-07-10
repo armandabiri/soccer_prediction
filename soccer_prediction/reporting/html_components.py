@@ -51,8 +51,54 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .ci-point { position:absolute; top:-3px; width:4px; height:14px; margin-left:-2px;
   border-radius:3px; background:var(--accent2); }
 .ci-value { text-align:right; color:var(--muted); font-size:.82rem; font-variant-numeric:tabular-nums; }
+.model-card { padding-top:14px; }
+.conclusion-line { margin:0 0 16px; padding:10px 12px; border-left:4px solid var(--accent); background:var(--bar); }
+.model-chart { display:grid; gap:9px; }
+.model-row { display:grid; grid-template-columns:180px minmax(260px,1fr); gap:10px; align-items:center; }
+.model-label { font-size:.83rem; }
+.model-badge { display:inline-block; margin-left:5px; padding:1px 5px; border-radius:8px; background:var(--bar);
+  color:var(--muted); font-size:.65rem; text-transform:uppercase; }
+.model-badge.conclusion { background:var(--accent); color:white; }
+.stacked { display:flex; height:25px; overflow:hidden; border-radius:7px; background:var(--bar); }
+.seg { display:flex; align-items:center; justify-content:center; min-width:25px; color:white; font-size:.68rem;
+  font-variant-numeric:tabular-nums; overflow:hidden; }
+.seg.home { background:#2563eb; } .seg.draw { background:#7c8595; } .seg.away { background:#dc2626; }
+.stack-legend { display:flex; justify-content:flex-end; gap:16px; color:var(--muted); font-size:.75rem; }
+.stack-legend span:nth-child(1) { color:#2563eb; } .stack-legend span:nth-child(2) { color:#7c8595; }
+.stack-legend span:nth-child(3) { color:#dc2626; }
+.forest-grid { display:grid; grid-template-columns:repeat(3,minmax(235px,1fr)); gap:12px; overflow-x:auto; }
+.forest-panel { min-width:235px; border:1px solid var(--line); border-radius:10px; padding:4px 9px 10px; }
+.forest-panel h4 { margin:5px 0 8px; font-size:.78rem; color:var(--muted); }
+.forest-row { display:grid; grid-template-columns:82px 1fr 30px; gap:6px; align-items:center;
+  margin:6px 0; font-size:.68rem; }
+.forest-track { position:relative; height:10px; border-radius:5px; background:var(--bar); }
+.forest-track i { position:absolute; top:3px; height:4px; border-radius:3px; background:var(--accent2); opacity:.45; }
+.forest-track b { position:absolute; top:0; width:3px; height:10px; margin-left:-1px; background:var(--accent2); }
+.forest-row small { text-align:right; color:var(--muted); }
+.market-head,.market-row { display:grid; grid-template-columns:150px minmax(100px,1fr) 34px minmax(100px,1fr) 34px;
+  gap:7px; align-items:center; }
+.market-head { color:var(--muted); font-size:.72rem; margin-bottom:4px; }
+.market-row { margin:6px 0; font-size:.76rem; }
+.mini-track,.tail-track { display:block; height:8px; overflow:hidden; border-radius:5px; background:var(--bar); }
+.mini-track i,.tail-track i { display:block; height:100%; background:var(--accent2); }
+.mini-track.btts i { background:var(--accent); }
+.market-row small,.tail-row small { text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; }
+.table-scroll { overflow-x:auto; }
+.table-scroll table { min-width:880px; }
+.tail-chart { display:grid; gap:7px; margin:8px 0 16px; }
+.tail-row { display:grid; grid-template-columns:150px minmax(180px,1fr) 50px; gap:8px;
+  align-items:center; font-size:.78rem; }
+.heatmap { display:grid; grid-template-columns:45px repeat(6,minmax(50px,1fr)); gap:3px; max-width:610px; }
+.heat { min-height:46px; display:flex; align-items:center; justify-content:center; border-radius:4px; color:white;
+  font-size:.72rem; font-variant-numeric:tabular-nums; }
+.heat.axis { min-height:28px; color:var(--muted); background:transparent; font-weight:600; }
+.heat.blank { min-height:28px; background:transparent; }
 @media (max-width:600px) { .player-form-row { grid-template-columns:minmax(105px,1fr) minmax(100px,2fr) 76px; } }
 @media (max-width:600px) { .ci-row { grid-template-columns:90px minmax(100px,2fr) 112px; } }
+@media (max-width:600px) { .model-row { grid-template-columns:105px minmax(210px,1fr); }
+  .model-chart { overflow-x:auto; }
+  .market-head,.market-row { grid-template-columns:105px minmax(90px,1fr) 32px minmax(90px,1fr) 32px; }
+  .heatmap { grid-template-columns:38px repeat(6,minmax(43px,1fr)); overflow-x:auto; } }
 .foot { color:var(--muted); font-size:.82rem; margin-top:24px; }
 .pill { display:inline-block; background:var(--bar); border-radius:999px; padding:2px 10px; font-size:.8rem; }
 .dot { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:7px;

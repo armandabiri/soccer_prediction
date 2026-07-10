@@ -32,18 +32,19 @@ def build_matchup_context(
     as_of: date | None = None,
 ) -> MatchupContext:
     """Summarize the evidence that explains a fixture forecast."""
-    home_form = _team_form(history, home, as_of=as_of)
-    away_form = _team_form(history, away, as_of=as_of)
-    h2h = _head_to_head(history, home, away, as_of=as_of)
-    paths = _connection_paths(history, home, away)
+    visible_history = tuple(record for record in history if as_of is None or record.date <= as_of)
+    home_form = _team_form(visible_history, home, as_of=as_of)
+    away_form = _team_form(visible_history, away, as_of=as_of)
+    h2h = _head_to_head(visible_history, home, away, as_of=as_of)
+    paths = _connection_paths(visible_history, home, away)
     teams = {
         name.casefold()
-        for record in history
+        for record in visible_history
         for name in (record.team, record.opponent)
     }
     matches = {
         (tuple(sorted((record.team.casefold(), record.opponent.casefold()))), record.date)
-        for record in history
+        for record in visible_history
     }
     style_label, style_description = _game_style(grid, corners, cards)
     return MatchupContext(
@@ -67,7 +68,11 @@ def _team_form(
     history: Sequence[TeamMatchStats], team: str, *, as_of: date | None = None
 ) -> TeamForm:
     records = sorted(
-        (record for record in history if record.team.casefold() == team.casefold()),
+        (
+            record
+            for record in history
+            if record.team.casefold() == team.casefold() and (as_of is None or record.date <= as_of)
+        ),
         key=lambda item: item.date,
         reverse=True,
     )
@@ -134,7 +139,9 @@ def _head_to_head(
     home_rows = [
         record
         for record in history
-        if record.team.casefold() == home.casefold() and record.opponent.casefold() == away.casefold()
+        if record.team.casefold() == home.casefold()
+        and record.opponent.casefold() == away.casefold()
+        and (as_of is None or record.date <= as_of)
     ]
     perspective_home = True
     rows = home_rows
@@ -143,7 +150,9 @@ def _head_to_head(
         rows = [
             record
             for record in history
-            if record.team.casefold() == away.casefold() and record.opponent.casefold() == home.casefold()
+            if record.team.casefold() == away.casefold()
+            and record.opponent.casefold() == home.casefold()
+            and (as_of is None or record.date <= as_of)
         ]
     if not rows:
         return 0, 0, 0, 0, 0.0, 0.0

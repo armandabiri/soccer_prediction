@@ -10,15 +10,17 @@ __all__ = ["confidence_interval_section", "scenario_section"]
 
 
 def confidence_interval_section(forecast: MatchForecast) -> str:
-    """Render 1X2 point estimates with approximate confidence whiskers."""
+    """Render the ensemble 1X2 conclusion with approximate uncertainty whiskers."""
     analysis = forecast.scenario_analysis
     if analysis is None:
         return ""
-    home_probability, draw_probability, away_probability = forecast.correct_score.home_draw_away()
+    ensemble = next((item for item in analysis.model_estimates if item.is_ensemble), None)
+    if ensemble is None:
+        return ""
     outcomes = (
-        (forecast.fixture.home_team, home_probability, analysis.home_win_interval),
-        ("Draw", draw_probability, analysis.draw_interval),
-        (forecast.fixture.away_team, away_probability, analysis.away_win_interval),
+        (forecast.fixture.home_team, ensemble.home_win, ensemble.home_win_interval),
+        ("Draw", ensemble.draw, ensemble.draw_interval),
+        (forecast.fixture.away_team, ensemble.away_win, ensemble.away_win_interval),
     )
     rows: list[str] = []
     for label, probability, interval in outcomes:
@@ -31,10 +33,10 @@ def confidence_interval_section(forecast: MatchForecast) -> str:
         )
     level = analysis.confidence_level
     return (
-        f'<h2>Result confidence intervals</h2><div class="card"><div class="ci-chart">{"".join(rows)}</div>'
-        f'<p class="foot">Point marker and approximate {level:.0%} interval. The interval combines the '
-        f"recency-weighted effective sample with disagreement between model families; it is a diagnostic "
-        f"uncertainty range, not a guarantee.</p></div>"
+        f'<h2>Ensemble conclusion uncertainty</h2><div class="card"><div class="ci-chart">{"".join(rows)}</div>'
+        f'<p class="foot">Point marker and approximate {level:.0%} sensitivity range for the ensemble. '
+        f"It combines recency-weighted effective evidence with model-family disagreement and is not a "
+        f"calibrated confidence guarantee.</p></div>"
     )
 
 
@@ -45,17 +47,6 @@ def scenario_section(forecast: MatchForecast) -> str:
         return ""
     home = escape(forecast.fixture.home_team)
     away = escape(forecast.fixture.away_team)
-    estimates = "".join(
-        f"<tr><td>{escape(item.model_name.replace('_', ' ').title())}</td>"
-        f'<td class="n">{item.home_win:.1%}</td><td class="n">{item.draw:.1%}</td>'
-        f'<td class="n">{item.away_win:.1%}</td>'
-        f'<td class="n">{item.home_expected_goals:.2f}-{item.away_expected_goals:.2f}</td></tr>'
-        for item in analysis.model_estimates
-    )
-    header = (
-        f'<thead><tr><th>Model</th><th class="n">{home}</th><th class="n">Draw</th>'
-        f'<th class="n">{away}</th><th class="n">Expected goals</th></tr></thead>'
-    )
     scenarios = (
         f"<tr><td>Middle 80% home goals</td><td class=\"n\">"
         f"{analysis.home_goals_interval[0]}-{analysis.home_goals_interval[1]}</td></tr>"
@@ -65,6 +56,7 @@ def scenario_section(forecast: MatchForecast) -> str:
         f"{analysis.total_goals_interval[0]}-{analysis.total_goals_interval[1]}</td></tr>"
         f'<tr><td>{home} clean sheet</td><td class="n">{analysis.home_clean_sheet:.1%}</td></tr>'
         f'<tr><td>{away} clean sheet</td><td class="n">{analysis.away_clean_sheet:.1%}</td></tr>'
+        f'<tr><td>Scoreless draw</td><td class="n">{analysis.scoreless_draw:.1%}</td></tr>'
         f'<tr><td>Five or more goals</td><td class="n">{analysis.five_plus_goals:.1%}</td></tr>'
         f'<tr><td>Winning margin of 3+</td><td class="n">{analysis.three_plus_goal_margin:.1%}</td></tr>'
     )
@@ -77,9 +69,22 @@ def scenario_section(forecast: MatchForecast) -> str:
         f"Intervals contain the middle 80% of {analysis.simulations:,} reproducible simulated scenarios; "
         f"they are ranges of possible match outcomes, not guarantees.</p>"
     )
+    tails = (
+        ("0-0", analysis.scoreless_draw),
+        ("5+ goals", analysis.five_plus_goals),
+        ("3+ goal margin", analysis.three_plus_goal_margin),
+        (f"{home} clean sheet", analysis.home_clean_sheet),
+        (f"{away} clean sheet", analysis.away_clean_sheet),
+    )
+    bars = "".join(
+        f'<div class="tail-row"><span>{label}</span><span class="tail-track">'
+        f'<i style="width:{probability * 100:.1f}%"></i></span>'
+        f'<small>{probability:.1%}</small></div>'
+        for label, probability in tails
+    )
     return (
-        f'<h2>Robustness &amp; random scenarios</h2><div class="card"><div style="overflow-x:auto">'
-        f"<table>{header}<tbody>{estimates}</tbody></table></div>"
+        f'<h2>Robustness &amp; random scenarios</h2><div class="card"><h3>Tail scenario probabilities</h3>'
+        f'<div class="tail-chart">{bars}</div><div class="table-scroll">'
         f'<table><thead><tr><th>Scenario</th><th class="n">Range / probability</th></tr></thead>'
-        f"<tbody>{scenarios}</tbody></table>{note}</div>"
+        f"<tbody>{scenarios}</tbody></table></div>{note}</div>"
     )

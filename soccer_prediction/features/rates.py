@@ -80,6 +80,8 @@ def compute_rates(history: Sequence[TeamMatchStats], *, today: date | None = Non
     weighted_records: list[tuple[TeamMatchStats, float]] = []
     anchor = max(record.date for record in history) if today is None else today
     for record in history:
+        if record.date > anchor:
+            continue
         age_days = (anchor - record.date).days
         if age_days > model_config.recency_window_days:
             continue

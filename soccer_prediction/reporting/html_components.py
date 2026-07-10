@@ -8,13 +8,17 @@ from soccer_prediction.models import MatchForecast
 
 _CSS = """
 :root { color-scheme: light dark; --bg:#f5f7f4; --card:#ffffff; --ink:#12160f; --muted:#586152;
-  --line:#e4e8e0; --accent:#1a7f4b; --accent2:#2563eb; --bar:#e0e5db; }
+  --line:#e4e8e0; --accent:#1a7f4b; --home:#2563eb; --away:#dc2626; --draw:#7c8595;
+  --accent2:var(--home); --bar:#e0e5db; }
 :root[data-theme="light"] { --bg:#f5f7f4; --card:#ffffff; --ink:#12160f; --muted:#586152;
-  --line:#e4e8e0; --accent:#1a7f4b; --accent2:#2563eb; --bar:#e0e5db; }
+  --line:#e4e8e0; --accent:#1a7f4b; --home:#2563eb; --away:#dc2626; --draw:#7c8595;
+  --accent2:var(--home); --bar:#e0e5db; }
 @media (prefers-color-scheme: dark) { :root { --bg:#0e120d; --card:#161b13; --ink:#e9ede4;
-  --muted:#98a48c; --line:#242b1f; --accent:#3ddc84; --accent2:#7cb0ff; --bar:#28301f; } }
+  --muted:#98a48c; --line:#242b1f; --accent:#3ddc84; --home:#60a5fa; --away:#f87171;
+  --draw:#9ca3af; --accent2:var(--home); --bar:#28301f; } }
 :root[data-theme="dark"] { --bg:#0e120d; --card:#161b13; --ink:#e9ede4; --muted:#98a48c;
-  --line:#242b1f; --accent:#3ddc84; --accent2:#7cb0ff; --bar:#28301f; }
+  --line:#242b1f; --accent:#3ddc84; --home:#60a5fa; --away:#f87171; --draw:#9ca3af;
+  --accent2:var(--home); --bar:#28301f; }
 * { box-sizing: border-box; }
 body { margin:0; padding:32px 16px; background:var(--bg); color:var(--ink);
   font:15px/1.55 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
@@ -50,6 +54,9 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .ci-range { position:absolute; top:3px; height:8px; border-radius:5px; background:var(--accent2); opacity:.42; }
 .ci-point { position:absolute; top:-3px; width:4px; height:14px; margin-left:-2px;
   border-radius:3px; background:var(--accent2); }
+.ci-row[data-outcome="home"] .ci-range,.ci-row[data-outcome="home"] .ci-point { background:var(--home); }
+.ci-row[data-outcome="draw"] .ci-range,.ci-row[data-outcome="draw"] .ci-point { background:var(--draw); }
+.ci-row[data-outcome="away"] .ci-range,.ci-row[data-outcome="away"] .ci-point { background:var(--away); }
 .ci-value { text-align:right; color:var(--muted); font-size:.82rem; font-variant-numeric:tabular-nums; }
 .model-card { padding-top:14px; }
 .conclusion-line { margin:0 0 16px; padding:10px 12px; border-left:4px solid var(--accent); background:var(--bar); }
@@ -62,10 +69,10 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .stacked { display:flex; height:25px; overflow:hidden; border-radius:7px; background:var(--bar); }
 .seg { display:flex; align-items:center; justify-content:center; min-width:25px; color:white; font-size:.68rem;
   font-variant-numeric:tabular-nums; overflow:hidden; }
-.seg.home { background:#2563eb; } .seg.draw { background:#7c8595; } .seg.away { background:#dc2626; }
+.seg.home { background:var(--home); } .seg.draw { background:var(--draw); } .seg.away { background:var(--away); }
 .stack-legend { display:flex; justify-content:flex-end; gap:16px; color:var(--muted); font-size:.75rem; }
-.stack-legend span:nth-child(1) { color:#2563eb; } .stack-legend span:nth-child(2) { color:#7c8595; }
-.stack-legend span:nth-child(3) { color:#dc2626; }
+.stack-legend span:nth-child(1) { color:var(--home); } .stack-legend span:nth-child(2) { color:var(--draw); }
+.stack-legend span:nth-child(3) { color:var(--away); }
 .forest-grid { display:grid; grid-template-columns:repeat(3,minmax(235px,1fr)); gap:12px; overflow-x:auto; }
 .forest-panel { min-width:235px; border:1px solid var(--line); border-radius:10px; padding:4px 9px 10px; }
 .forest-panel h4 { margin:5px 0 8px; font-size:.78rem; color:var(--muted); }
@@ -74,6 +81,9 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .forest-track { position:relative; height:10px; border-radius:5px; background:var(--bar); }
 .forest-track i { position:absolute; top:3px; height:4px; border-radius:3px; background:var(--accent2); opacity:.45; }
 .forest-track b { position:absolute; top:0; width:3px; height:10px; margin-left:-1px; background:var(--accent2); }
+.forest-panel.home .forest-track i,.forest-panel.home .forest-track b { background:var(--home); }
+.forest-panel.draw .forest-track i,.forest-panel.draw .forest-track b { background:var(--draw); }
+.forest-panel.away .forest-track i,.forest-panel.away .forest-track b { background:var(--away); }
 .forest-row small { text-align:right; color:var(--muted); }
 .market-head,.market-row { display:grid; grid-template-columns:150px minmax(100px,1fr) 34px minmax(100px,1fr) 34px;
   gap:7px; align-items:center; }
@@ -82,6 +92,9 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .mini-track,.tail-track { display:block; height:8px; overflow:hidden; border-radius:5px; background:var(--bar); }
 .mini-track i,.tail-track i { display:block; height:100%; background:var(--accent2); }
 .mini-track.btts i { background:var(--accent); }
+.tail-row.home .tail-track i { background:var(--home); }
+.tail-row.draw .tail-track i { background:var(--draw); }
+.tail-row.away .tail-track i { background:var(--away); }
 .market-row small,.tail-row small { text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; }
 .table-scroll { overflow-x:auto; }
 .table-scroll table { min-width:880px; }
@@ -89,10 +102,18 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .tail-row { display:grid; grid-template-columns:150px minmax(180px,1fr) 50px; gap:8px;
   align-items:center; font-size:.78rem; }
 .heatmap { display:grid; grid-template-columns:45px repeat(6,minmax(50px,1fr)); gap:3px; max-width:610px; }
-.heat { min-height:46px; display:flex; align-items:center; justify-content:center; border-radius:4px; color:white;
+.heat { min-height:46px; display:flex; align-items:center; justify-content:center; border-radius:4px; color:var(--ink);
   font-size:.72rem; font-variant-numeric:tabular-nums; }
+.heat.home { background:color-mix(in srgb,var(--home) var(--strength),var(--card)); }
+.heat.away { background:color-mix(in srgb,var(--away) var(--strength),var(--card)); }
+.heat.draw { background:color-mix(in srgb,var(--draw) var(--strength),var(--card)); }
+.heat.strong { color:white; text-shadow:0 1px 1px rgba(0,0,0,.35); }
 .heat.axis { min-height:28px; color:var(--muted); background:transparent; font-weight:600; }
 .heat.blank { min-height:28px; background:transparent; }
+.heat-legend { max-width:610px; margin:12px 0 4px; }
+.heat-gradient { height:10px; border-radius:6px;
+  background:linear-gradient(90deg,var(--away),var(--draw),var(--home)); }
+.heat-labels { display:flex; justify-content:space-between; color:var(--muted); font-size:.72rem; margin-top:3px; }
 @media (max-width:600px) { .player-form-row { grid-template-columns:minmax(105px,1fr) minmax(100px,2fr) 76px; } }
 @media (max-width:600px) { .ci-row { grid-template-columns:90px minmax(100px,2fr) 112px; } }
 @media (max-width:600px) { .model-row { grid-template-columns:105px minmax(210px,1fr); }
@@ -127,12 +148,24 @@ def _team_color(team: str) -> str:
     return _FALLBACK_COLORS[digest % len(_FALLBACK_COLORS)]
 
 
+def _fixture_color(forecast: MatchForecast, team: str) -> str:
+    """Use semantic blue/red colors for the two forecast teams."""
+    if team.casefold() == forecast.fixture.home_team.casefold():
+        return "var(--home)"
+    if team.casefold() == forecast.fixture.away_team.casefold():
+        return "var(--away)"
+    return _team_color(team)
+
+
 def _dot(color: str) -> str:
     return f'<span class="dot" style="background:{color}"></span>'
 
 
-def _team_legend(teams: list[str]) -> str:
-    chips = "".join(f'<span class="chip">{_dot(_team_color(team))}{escape(team)}</span>' for team in teams)
+def _team_legend(home: str, away: str) -> str:
+    chips = (
+        f'<span class="chip">{_dot("var(--home)")}{escape(home)} (home)</span>'
+        f'<span class="chip">{_dot("var(--away)")}{escape(away)} (away)</span>'
+    )
     return f'<p class="legend">{chips}</p>'
 
 
@@ -152,7 +185,7 @@ def _scorers_section(forecast: MatchForecast) -> str:
     maximum_goals = max((player.recent_goals for player in chart_players), default=1.0) or 1.0
     chart_rows: list[str] = []
     for player in chart_players:
-        color = _team_color(player.team)
+        color = _fixture_color(forecast, player.team)
         width = min(100.0, player.recent_goals / maximum_goals * 100.0)
         marker = "*" if player.recent_form_estimated else ""
         sample = f"{player.recent_appearances} apps{marker}" if player.recent_appearances else "no sample"
@@ -172,7 +205,7 @@ def _scorers_section(forecast: MatchForecast) -> str:
     )
     rows: list[str] = []
     for player in scorers.players[:12]:
-        color = _team_color(player.team)
+        color = _fixture_color(forecast, player.team)
         appearances = player.recent_appearances
         goal_rate = player.recent_goals / appearances if appearances else 0.0
         form_width = min(100.0, goal_rate * 100.0)
@@ -183,7 +216,7 @@ def _scorers_section(forecast: MatchForecast) -> str:
             else "n/a"
         )
         rows.append(
-            f'<tr style="background:{color}22"><td>{escape(player.player)}</td>'
+            f'<tr style="background:color-mix(in srgb,{color} 14%,transparent)"><td>{escape(player.player)}</td>'
             f"<td>{_dot(color)}{escape(player.team)}</td>"
             f'<td class="n">{escape(player.position)}</td>'
             f'<td><div class="formbar" title="Goals per appearance over the latest available sample">'
@@ -220,9 +253,10 @@ def _history_section(forecast: MatchForecast) -> str:
     displayed = sorted(forecast.history, key=lambda item: item.date, reverse=True)[:80]
     for record in displayed:
         venue = "H" if record.is_home else "A"
-        color = _team_color(record.team)
+        color = _fixture_color(forecast, record.team)
         rows.append(
-            f'<tr style="background:{color}22"><td>{_dot(color)}{escape(record.team)}</td>'
+            f'<tr style="background:color-mix(in srgb,{color} 14%,transparent)">'
+            f'<td>{_dot(color)}{escape(record.team)}</td>'
             f'<td class="n">{record.date.isoformat()}</td><td>{escape(record.opponent)}</td>'
             f'<td class="n">{venue}</td><td class="n">{record.goals_for}-{record.goals_against}</td>'
             f'<td class="n">{record.ht_goals_for}-{record.ht_goals_against}</td>'

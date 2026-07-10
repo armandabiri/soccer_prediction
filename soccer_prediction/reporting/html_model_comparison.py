@@ -50,7 +50,7 @@ def _forest_chart(estimates: tuple[ModelEstimate, ...], home: str, away: str) ->
         (away, "away_win", "away_win_interval"),
     )
     panels = []
-    for outcome, point_field, interval_field in outcomes:
+    for index, (outcome, point_field, interval_field) in enumerate(outcomes):
         rows = []
         for item in estimates:
             point = float(getattr(item, point_field))
@@ -60,7 +60,10 @@ def _forest_chart(estimates: tuple[ModelEstimate, ...], home: str, away: str) ->
                 f'<i style="left:{lower * 100:.1f}%;width:{(upper - lower) * 100:.1f}%"></i>'
                 f'<b style="left:{point * 100:.1f}%"></b></span><small>{point:.0%}</small></div>'
             )
-        panels.append(f'<div class="forest-panel"><h4>{escape(outcome)}</h4>{"".join(rows)}</div>')
+        outcome_class = ("home", "draw", "away")[index]
+        panels.append(
+            f'<div class="forest-panel {outcome_class}"><h4>{escape(outcome)}</h4>{"".join(rows)}</div>'
+        )
     return '<h3>Approximate 80% uncertainty ranges</h3><div class="forest-grid">' + "".join(panels) + "</div>"
 
 
@@ -169,16 +172,29 @@ def ensemble_heatmap_section(forecast: MatchForecast) -> str:
     for home_goals, row in enumerate(values):
         cells.append(f'<div class="heat axis">{home_goals if home_goals < 5 else "5+"}</div>')
         for away_goals, probability in enumerate(row):
-            alpha = 0.10 + 0.82 * probability / maximum
+            relative_strength = probability / maximum
+            strength = 18.0 + 82.0 * relative_strength
+            outcome = "home" if home_goals > away_goals else "away" if away_goals > home_goals else "draw"
+            strong = " strong" if relative_strength >= 0.52 else ""
             home_label = home_goals if home_goals < 5 else "5 plus"
             away_label = away_goals if away_goals < 5 else "5 plus"
             aria = f"home {home_label}, away {away_label}: {probability:.1%}"
             cells.append(
-                f'<div class="heat" role="img" aria-label="{aria}" style="background:rgba(37,99,235,{alpha:.2f})">'
+                f'<div class="heat {outcome}{strong}" role="img" aria-label="{aria}" '
+                f'style="--strength:{strength:.1f}%">'
                 f"{probability:.1%}</div>"
             )
+    home = escape(forecast.fixture.home_team)
+    away = escape(forecast.fixture.away_team)
+    legend = (
+        '<div class="heat-legend" role="img" aria-label="Score advantage color scale: away red to home blue">'
+        '<div class="heat-gradient"></div><div class="heat-labels">'
+        f'<span>{away} leads · red</span><span>Draw · neutral</span><span>{home} leads · blue</span>'
+        "</div></div>"
+    )
     return (
         '<h2>Ensemble score distribution</h2><div class="card"><p class="sub">Rows are home goals; '
-        'columns are away goals. The 5+ cells collect the full upper tail.</p>'
-        f'<div class="heatmap">{"".join(cells)}</div></div>'
+        'columns are away goals. Hue shows the leading side; intensity shows probability. '
+        'The 5+ cells collect the full upper tail.</p>'
+        f'{legend}<div class="heatmap">{"".join(cells)}</div></div>'
     )

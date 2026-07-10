@@ -5,6 +5,7 @@ from __future__ import annotations
 from html import escape
 
 from soccer_prediction.models import MatchForecast
+from soccer_prediction.reporting.html_components import _dot, _fixture_color
 
 __all__ = ["context_section"]
 
@@ -16,16 +17,20 @@ def context_section(forecast: MatchForecast) -> str:
         return ""
     home = escape(forecast.fixture.home_team)
     away = escape(forecast.fixture.away_team)
-    form_rows = "".join(
-        f"<tr><td>{escape(form.team)}</td><td class=\"n\">{form.matches}</td>"
-        f'<td class="n">{form.effective_matches:.1f}</td><td class="n">{form.points_per_match:.2f}</td>'
-        f'<td class="n">{form.goals_for_per_match:.2f}-{form.goals_against_per_match:.2f}</td>'
-        f'<td class="n">{form.corners_for_per_match:.2f}</td>'
-        f'<td><span class="pill">{escape(form.morale_label)} {form.morale_index:+.2f}</span></td>'
-        f'<td class="n">{_streak(form.result_streak)}</td>'
-        f"<td>{escape('; '.join(form.recent_results) or 'n/a')}</td></tr>"
-        for form in (context.home_form, context.away_form)
-    )
+    form_rows_list = []
+    for form in (context.home_form, context.away_form):
+        color = _fixture_color(forecast, form.team)
+        form_rows_list.append(
+            f'<tr style="background:color-mix(in srgb,{color} 14%,transparent)">'
+            f"<td>{_dot(color)}{escape(form.team)}</td><td class=\"n\">{form.matches}</td>"
+            f'<td class="n">{form.effective_matches:.1f}</td><td class="n">{form.points_per_match:.2f}</td>'
+            f'<td class="n">{form.goals_for_per_match:.2f}-{form.goals_against_per_match:.2f}</td>'
+            f'<td class="n">{form.corners_for_per_match:.2f}</td>'
+            f'<td><span class="pill">{escape(form.morale_label)} {form.morale_index:+.2f}</span></td>'
+            f'<td class="n">{_streak(form.result_streak)}</td>'
+            f"<td>{escape('; '.join(form.recent_results) or 'n/a')}</td></tr>"
+        )
+    form_rows = "".join(form_rows_list)
     form_header = (
         '<thead><tr><th>Team</th><th class="n">Matches</th><th class="n">Effective</th>'
         '<th class="n">Pts/match</th><th class="n">Goals F-A</th><th class="n">Corners</th>'

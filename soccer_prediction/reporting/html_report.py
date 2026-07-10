@@ -13,7 +13,6 @@ from soccer_prediction.reporting.html_components import (
     _history_section,
     _pct,
     _scorers_section,
-    _team_color,
     _team_legend,
 )
 from soccer_prediction.reporting.html_context import context_section
@@ -54,7 +53,7 @@ def render_html(forecast: MatchForecast, *, title: str | None = None, generated_
         f"<h1>{heading}</h1>"
         f'<p class="sub">Selected model: <span class="pill">{escape(forecast.model_name)}</span> '
         f"&nbsp; Generated: {stamp} &nbsp; Data: {notes}</p>"
-        f"{_team_legend([forecast.fixture.home_team, forecast.fixture.away_team])}"
+        f"{_team_legend(forecast.fixture.home_team, forecast.fixture.away_team)}"
         f"{body}"
         f'<p class="foot">Generated {stamp}. Probabilities are model estimates from the historical '
         f"team stats listed above; per-half and minimum-corner figures are illustrative outputs, "
@@ -65,7 +64,7 @@ def render_html(forecast: MatchForecast, *, title: str | None = None, generated_
 
 def _row(label: str, probability: float, color: str | None = None) -> str:
     width = max(0.0, min(100.0, probability * 100))
-    style = f' style="background:{color}22"' if color else ""
+    style = f' style="background:color-mix(in srgb,{color} 14%,transparent)"' if color else ""
     return (
         f"<tr{style}><td>{label}</td>"
         f'<td><div class="bar"><span style="width:{width:.1f}%"></span></div></td>'
@@ -109,8 +108,8 @@ def _tiles(
 
 
 def _result_section(home: str, away: str, home_p: float, draw_p: float, away_p: float) -> str:
-    home_color = _team_color(home)
-    away_color = _team_color(away)
+    home_color = "var(--home)"
+    away_color = "var(--away)"
     rows = (
         _row(f"{_dot(home_color)}{home} win", home_p, home_color)
         + _row("Draw", draw_p)
@@ -123,8 +122,8 @@ def _knockout_section(forecast: MatchForecast, home: str, away: str) -> str:
     knockout = forecast.knockout
     if knockout is None:
         return ""
-    home_color = _team_color(home)
-    away_color = _team_color(away)
+    home_color = "var(--home)"
+    away_color = "var(--away)"
     rows = (
         _row(f"{_dot(home_color)}{home} to advance", knockout.home_advance, home_color)
         + _row(f"{_dot(away_color)}{away} to advance", knockout.away_advance, away_color)

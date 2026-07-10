@@ -62,3 +62,11 @@ def test_html_exposes_all_model_decision_visuals() -> None:
     assert "Ensemble score distribution" in html
     assert "Tail scenario probabilities" in html
     assert "Scoreless draw" in html
+    assert "--home:#2563eb" in html
+    assert "--away:#dc2626" in html
+    assert "heat-gradient" in html
+    assert "leads · red" in html
+    assert "leads · blue" in html
+    assert 'class="heat home' in html
+    assert 'class="heat away' in html
+    assert 'class="heat draw' in html

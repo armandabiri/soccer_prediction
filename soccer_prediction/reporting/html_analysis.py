@@ -18,15 +18,15 @@ def confidence_interval_section(forecast: MatchForecast) -> str:
     if ensemble is None:
         return ""
     outcomes = (
-        (forecast.fixture.home_team, ensemble.home_win, ensemble.home_win_interval),
-        ("Draw", ensemble.draw, ensemble.draw_interval),
-        (forecast.fixture.away_team, ensemble.away_win, ensemble.away_win_interval),
+        ("home", forecast.fixture.home_team, ensemble.home_win, ensemble.home_win_interval),
+        ("draw", "Draw", ensemble.draw, ensemble.draw_interval),
+        ("away", forecast.fixture.away_team, ensemble.away_win, ensemble.away_win_interval),
     )
     rows: list[str] = []
-    for label, probability, interval in outcomes:
+    for outcome, label, probability, interval in outcomes:
         lower, upper = interval
         rows.append(
-            f'<div class="ci-row"><div>{escape(label)}</div><div class="ci-track">'
+            f'<div class="ci-row" data-outcome="{outcome}"><div>{escape(label)}</div><div class="ci-track">'
             f'<span class="ci-range" style="left:{lower * 100:.1f}%;width:{(upper - lower) * 100:.1f}%"></span>'
             f'<span class="ci-point" style="left:{probability * 100:.1f}%"></span></div>'
             f'<div class="ci-value">{probability:.1%} ({lower:.1%}–{upper:.1%})</div></div>'
@@ -70,17 +70,17 @@ def scenario_section(forecast: MatchForecast) -> str:
         f"they are ranges of possible match outcomes, not guarantees.</p>"
     )
     tails = (
-        ("0-0", analysis.scoreless_draw),
-        ("5+ goals", analysis.five_plus_goals),
-        ("3+ goal margin", analysis.three_plus_goal_margin),
-        (f"{home} clean sheet", analysis.home_clean_sheet),
-        (f"{away} clean sheet", analysis.away_clean_sheet),
+        ("draw", "0-0", analysis.scoreless_draw),
+        ("draw", "5+ goals", analysis.five_plus_goals),
+        ("draw", "3+ goal margin", analysis.three_plus_goal_margin),
+        ("home", f"{home} clean sheet", analysis.home_clean_sheet),
+        ("away", f"{away} clean sheet", analysis.away_clean_sheet),
     )
     bars = "".join(
-        f'<div class="tail-row"><span>{label}</span><span class="tail-track">'
+        f'<div class="tail-row {outcome}"><span>{label}</span><span class="tail-track">'
         f'<i style="width:{probability * 100:.1f}%"></i></span>'
         f'<small>{probability:.1%}</small></div>'
-        for label, probability in tails
+        for outcome, label, probability in tails
     )
     return (
         f'<h2>Robustness &amp; random scenarios</h2><div class="card"><h3>Tail scenario probabilities</h3>'

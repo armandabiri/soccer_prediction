@@ -3,17 +3,28 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Annotated, Literal
 
 import typer
 
+from soccer_prediction.models import StrategyRequest
 from soccer_prediction.public import forecast_fixture
 from soccer_prediction.reporting import render_html, render_json, render_markdown, render_text
+from soccer_prediction.strategy import build_betting_strategy, load_quote_snapshot
 
 __all__ = ["cmd_fetch", "cmd_predict"]
 
 OutputFormat = Literal["text", "json", "md", "html"]
+StrategyPlan = Literal["conservative", "balanced", "aggressive"]
+
+
+def _decimal_option(value: str, name: str) -> Decimal:
+    try:
+        return Decimal(value)
+    except InvalidOperation as error:
+        raise typer.BadParameter("must be a decimal value", param_hint=name) from error
 
 
 def cmd_predict(
@@ -31,6 +42,13 @@ def cmd_predict(
     neutral_venue: Annotated[bool, typer.Option("--neutral-venue", help="Remove home-field effects")] = False,
     output_format: Annotated[OutputFormat, typer.Option("--format")] = "text",
     output: Annotated[Path | None, typer.Option("--output", help="Write the report to a file")] = None,
+    quotes: Annotated[Path | None, typer.Option("--quotes", help="Executable quote snapshot JSON")] = None,
+    bankroll: Annotated[str, typer.Option("--bankroll", help="Strategy bankroll in dollars")] = "10.00",
+    strategy_plan: Annotated[StrategyPlan, typer.Option("--strategy-plan")] = "balanced",
+    safety_margin: Annotated[str, typer.Option("--safety-margin")] = "0.03",
+    slippage: Annotated[str, typer.Option("--slippage", help="Per-contract slippage in dollars")] = "0.005",
+    reserve_pct: Annotated[str | None, typer.Option("--reserve-pct")] = None,
+    max_quote_age: Annotated[int, typer.Option("--max-quote-age", help="Maximum quote age in seconds")] = 3600,
 ) -> None:
     """Forecast a fixture and print or write a report in the chosen format."""
     try:
@@ -45,14 +63,28 @@ def cmd_predict(
         as_of=forecast_date,
         neutral_venue=neutral_venue,
     )
+    strategy = None
+    if quotes is not None:
+        try:
+            request = StrategyRequest(
+                bankroll=_decimal_option(bankroll, "--bankroll"),
+                plan=strategy_plan,
+                safety_margin=_decimal_option(safety_margin, "--safety-margin"),
+                slippage=_decimal_option(slippage, "--slippage"),
+                reserve_pct=_decimal_option(reserve_pct, "--reserve-pct") if reserve_pct else None,
+                max_quote_age_seconds=max_quote_age,
+            )
+            strategy = build_betting_strategy(forecast, load_quote_snapshot(quotes), request=request)
+        except ValueError as error:
+            raise typer.BadParameter(str(error), param_hint="--quotes/strategy") from error
     if output_format == "json":
-        content = render_json(forecast)
+        content = render_json(forecast, strategy=strategy)
     elif output_format == "md":
-        content = render_markdown(forecast)
+        content = render_markdown(forecast, strategy=strategy)
     elif output_format == "html":
-        content = render_html(forecast, title=f"{home} vs {away} - Match Forecast")
+        content = render_html(forecast, title=f"{home} vs {away} - Match Forecast", strategy=strategy)
     else:
-        content = render_text(forecast)
+        content = render_text(forecast, strategy=strategy)
     if output is not None:
         output.write_text(content, encoding="utf-8")
         typer.echo(f"wrote {output_format} report to {output}")

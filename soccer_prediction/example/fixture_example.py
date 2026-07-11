@@ -4,7 +4,8 @@
 entry owns its own bundled offline sample (history + squad) and its own
 registered data-source names, so adding a fixture never collides with another
 one's registration. By default every function operates on ``DEFAULT_FIXTURE``
-(Switzerland vs Colombia), matching the package's original example behaviour.
+(Norway vs England), matching ``DEFAULT_FIXTURE``. Compatibility exports from
+``soccer_prediction.example`` remain pinned to Switzerland vs Colombia.
 
 By default (``live=True``) each fixture uses **all real international results
 from 2024-01-01 to today** for both teams, fetched from the public-domain
@@ -23,15 +24,25 @@ import logging
 import webbrowser
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from importlib import resources
 from pathlib import Path
+from typing import Literal
 
 from soccer_prediction.datasources.base import DataSourceFactory, register_source
 from soccer_prediction.datasources.errors import DataSourceError
 from soccer_prediction.datasources.international_results import InternationalResultsSource
 from soccer_prediction.example._data import load_packaged_history, load_packaged_players
-from soccer_prediction.models import Fixture, MatchForecast, PlayerStats, TeamMatchStats
+from soccer_prediction.models import (
+    BettingStrategy,
+    Fixture,
+    MatchForecast,
+    PlayerStats,
+    StrategyRequest,
+    TeamMatchStats,
+)
 from soccer_prediction.public import forecast_fixture
 from soccer_prediction.reporting import render_html, render_markdown, render_text
+from soccer_prediction.strategy import build_betting_strategy, load_quote_snapshot
 
 __all__ = [
     "DEFAULT_FIXTURE",
@@ -39,6 +50,7 @@ __all__ = [
     "FixtureDataSource",
     "FixtureSpec",
     "build_forecast",
+    "build_strategy",
     "example_usage",
     "load_history",
     "load_players",
@@ -129,7 +141,7 @@ FIXTURES: dict[str, FixtureSpec] = {
     ),
 }
 
-DEFAULT_FIXTURE = "argentina_switzerland"
+DEFAULT_FIXTURE = "norway_england"
 
 
 class FixtureDataSource:
@@ -207,24 +219,49 @@ def build_forecast(model: str = "ensemble", *, key: str = DEFAULT_FIXTURE, live:
     return forecast_fixture(spec.home, spec.away, model=model, source=source, neutral_venue=True)
 
 
+def build_strategy(
+    forecast: MatchForecast,
+    *,
+    quote_path: str | Path | None = None,
+    plan: Literal["conservative", "balanced", "aggressive"] = "balanced",
+) -> BettingStrategy:
+    """Build the example's $10 strategy from explicit or bundled illustrative quotes."""
+    request = StrategyRequest(plan=plan, max_quote_age_seconds=None if quote_path is None else 3600)
+    if quote_path is not None:
+        snapshot = load_quote_snapshot(quote_path)
+    else:
+        resource = resources.files(__package__).joinpath("data/betting_quotes_example.json")
+        with resources.as_file(resource) as path:
+            snapshot = load_quote_snapshot(path)
+    return build_betting_strategy(forecast, snapshot, request=request)
+
+
 def write_reports(
     output_dir: str | Path | None = None,
     *,
     key: str = DEFAULT_FIXTURE,
     model: str = "ensemble",
     live: bool = True,
+    quote_path: str | Path | None = None,
+    include_strategy: bool = True,
 ) -> dict[str, Path]:
     """Write timestamped HTML and Markdown reports for a fixture and return their paths."""
     spec = _spec(key)
     forecast = build_forecast(model, key=key, live=live)
+    strategy = build_strategy(forecast, quote_path=quote_path) if include_strategy else None
     generated_at = datetime.now(UTC)
     stamp = generated_at.strftime("%Y-%m-%d_%H-%M-%S")
     out = Path("reports") if output_dir is None else Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     html_path = out / f"{stamp}_{spec.key}.html"
     md_path = out / f"{stamp}_{spec.key}.md"
-    html_path.write_text(render_html(forecast, title=spec.title, generated_at=generated_at), encoding="utf-8")
-    md_path.write_text(f"# {spec.title}\n\n{render_markdown(forecast, generated_at=generated_at)}\n", encoding="utf-8")
+    html_path.write_text(
+        render_html(forecast, title=spec.title, generated_at=generated_at, strategy=strategy), encoding="utf-8"
+    )
+    md_path.write_text(
+        f"# {spec.title}\n\n{render_markdown(forecast, generated_at=generated_at, strategy=strategy)}\n",
+        encoding="utf-8",
+    )
     return {"html": html_path, "md": md_path}
 
 
@@ -245,7 +282,8 @@ def run_example(
     open_browser: bool = False,
 ) -> dict[str, Path]:
     """Print a text forecast, write the HTML and Markdown reports, optionally open the HTML."""
-    print(render_text(build_forecast(key=key, live=live)))
+    forecast = build_forecast(key=key, live=live)
+    print(render_text(forecast, strategy=build_strategy(forecast)))
     paths = write_reports(output_dir, key=key, live=live)
     for kind, path in paths.items():
         print(f"wrote {kind} report: {path}")

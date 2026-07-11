@@ -6,8 +6,9 @@ import json
 from dataclasses import asdict
 from datetime import UTC, datetime
 
-from soccer_prediction.models import MatchForecast
+from soccer_prediction.models import BettingStrategy, MatchForecast
 from soccer_prediction.reporting.model_analysis import model_analysis_markdown, model_analysis_text
+from soccer_prediction.reporting.strategy_report import strategy_markdown, strategy_text
 
 __all__ = ["render_json", "render_markdown", "render_text", "example_usage", "main"]
 
@@ -152,7 +153,12 @@ def _context_md(forecast: MatchForecast) -> list[str]:
     return rows
 
 
-def render_text(forecast: MatchForecast, *, generated_at: datetime | None = None) -> str:
+def render_text(
+    forecast: MatchForecast,
+    *,
+    generated_at: datetime | None = None,
+    strategy: BettingStrategy | None = None,
+) -> str:
     """Render a forecast as readable text."""
     fixture = forecast.fixture
     half = forecast.per_half.half_time_result
@@ -200,15 +206,25 @@ def render_text(forecast: MatchForecast, *, generated_at: datetime | None = None
         lines.append(f"Top player markets: {names}")
     if forecast.generated_notes:
         lines.append("Notes: " + "; ".join(forecast.generated_notes))
+    if strategy is not None:
+        lines.extend(["", strategy_text(strategy)])
     return "\n".join(lines)
 
 
-def render_json(forecast: MatchForecast) -> str:
+def render_json(forecast: MatchForecast, *, strategy: BettingStrategy | None = None) -> str:
     """Render a forecast as JSON (includes the historical data used)."""
-    return json.dumps(asdict(forecast), indent=2, sort_keys=True, default=str)
+    payload = asdict(forecast)
+    if strategy is not None:
+        payload["betting_strategy"] = asdict(strategy)
+    return json.dumps(payload, indent=2, sort_keys=True, default=str)
 
 
-def render_markdown(forecast: MatchForecast, *, generated_at: datetime | None = None) -> str:
+def render_markdown(
+    forecast: MatchForecast,
+    *,
+    generated_at: datetime | None = None,
+    strategy: BettingStrategy | None = None,
+) -> str:
     """Render a forecast as a multi-section Markdown report."""
     fixture = forecast.fixture
     home, away = fixture.home_team, fixture.away_team
@@ -255,6 +271,8 @@ def render_markdown(forecast: MatchForecast, *, generated_at: datetime | None = 
         "",
         *_history_table_md(forecast),
     ]
+    if strategy is not None:
+        lines.extend(["", strategy_markdown(strategy)])
     return "\n".join(lines)
 
 

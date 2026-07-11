@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "venue": "illustrative_demo_not_live",
+  "observed_at": "2026-07-11T20:00:00Z",
+  "notes": [
+    "Illustrative static quotes for the bundled example only; replace them with current executable venue quotes before making any decision.",
+    "This package does not place orders or verify venue eligibility, settlement rules, or fees."
+  ],
+  "contracts": [
+    {"market": "match_result", "selection": "home", "ask": "0.25", "bid": "0.23", "available_at_ask": "4", "available_at_bid": "4", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_result"},
+    {"market": "match_result", "selection": "draw", "ask": "0.18", "bid": "0.16", "available_at_ask": "4", "available_at_bid": "4", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_result"},
+    {"market": "match_result", "selection": "away", "ask": "0.25", "bid": "0.23", "available_at_ask": "4", "available_at_bid": "4", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_result"},
+    {"market": "correct_score", "selection": "0-0", "ask": "0.03", "bid": "0.02", "available_at_ask": "10", "available_at_bid": "10", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_exact_score"},
+    {"market": "correct_score", "selection": "1-0", "ask": "0.03", "bid": "0.02", "available_at_ask": "10", "available_at_bid": "10", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_exact_score"},
+    {"market": "correct_score", "selection": "0-1", "ask": "0.03", "bid": "0.02", "available_at_ask": "10", "available_at_bid": "10", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_exact_score"},
+    {"market": "correct_score", "selection": "1-1", "ask": "0.03", "bid": "0.02", "available_at_ask": "10", "available_at_bid": "10", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_exact_score"},
+    {"market": "correct_score", "selection": "2-0", "ask": "0.03", "bid": "0.02", "available_at_ask": "10", "available_at_bid": "10", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_exact_score"},
+    {"market": "correct_score", "selection": "0-2", "ask": "0.03", "bid": "0.02", "available_at_ask": "10", "available_at_bid": "10", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_exact_score"},
+    {"market": "correct_score", "selection": "2-1", "ask": "0.03", "bid": "0.02", "available_at_ask": "10", "available_at_bid": "10", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_exact_score"},
+    {"market": "correct_score", "selection": "1-2", "ask": "0.03", "bid": "0.02", "available_at_ask": "10", "available_at_bid": "10", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_exact_score"},
+    {"market": "correct_score", "selection": "2-2", "ask": "0.02", "bid": "0.01", "available_at_ask": "10", "available_at_bid": "10", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_exact_score"},
+    {"market": "btts", "selection": "yes", "ask": "0.35", "bid": "0.32", "available_at_ask": "3", "available_at_bid": "3", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_btts"},
+    {"market": "btts", "selection": "no", "ask": "0.35", "bid": "0.32", "available_at_ask": "3", "available_at_bid": "3", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_btts"},
+    {"market": "total_goals", "selection": "over_2.5", "ask": "0.35", "bid": "0.32", "available_at_ask": "3", "available_at_bid": "3", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_total"},
+    {"market": "total_goals", "selection": "under_2.5", "ask": "0.35", "bid": "0.32", "available_at_ask": "3", "available_at_bid": "3", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "regulation_time_total"},
+    {"market": "second_half_result", "selection": "home", "ask": "0.25", "bid": "0.22", "available_at_ask": "3", "available_at_bid": "3", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "second_half_result"},
+    {"market": "second_half_result", "selection": "draw", "ask": "0.20", "bid": "0.18", "available_at_ask": "3", "available_at_bid": "3", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "second_half_result"},
+    {"market": "second_half_result", "selection": "away", "ask": "0.25", "bid": "0.22", "available_at_ask": "3", "available_at_bid": "3", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "second_half_result"},
+    {"market": "player_to_score", "selection": "Erling Haaland", "ask": "0.15", "bid": "0.13", "available_at_ask": "3", "available_at_bid": "3", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "anytime_scorer"},
+    {"market": "player_to_score", "selection": "Harry Kane", "ask": "0.15", "bid": "0.13", "available_at_ask": "3", "available_at_bid": "3", "tick_size": "0.01", "quantity_step": "1", "buy_fee_rate": "0.01", "sell_fee_rate": "0.01", "settlement": "anytime_scorer"}
+  ]
+}

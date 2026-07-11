@@ -67,3 +67,18 @@ Two independent Poisson models — first-half rates from half-time goals, second
 ## Trustworthiness: backtesting
 
 `walk_forward(history, model)` trains only on matches strictly before each test match (no look-ahead leakage) and scores predictions with ranked probability score, log-loss, Brier score, and a calibration curve. Use it to compare models before trusting a forecast.
+
+## Price-aware strategy calculations
+
+The optional strategy engine consumes model probabilities and an executable
+quote snapshot; it does not change the forecast. Eligibility uses the lower
+1X2 sensitivity bound when available, or model probability minus the safety
+margin, then subtracts ask, fees, and slippage. Allocation uses deterministic
+`Decimal` arithmetic and retains cash under bankroll, reserve, liquidity, 30%
+single-score, and 60% aggregate-score constraints.
+
+Live current-score value uses a constant-rate Poisson no-more-goals baseline
+scaled by remaining time and explicit bounded live-rate multipliers. It is not
+an observation of tactics, cards, injuries, substitutions, or pressure. See
+[betting-strategy-math.md](betting-strategy-math.md) for exact formulas and
+recovery semantics.

@@ -43,7 +43,10 @@ def test_switzerland_colombia_reports_written(tmp_path: Path) -> None:
     assert "Corners" in html
     assert "Goalscorers" in html
     assert "James Rodriguez" in html
+    assert "Betting value &amp; bankroll allocation" in html
+    assert "Live correct-score exit ladder" in html
     assert "Switzerland vs Colombia" in markdown
+    assert "### Betting value & bankroll allocation" in markdown
     assert "### Goalscorers &amp; assists" in markdown or "### Goalscorers & assists" in markdown
 
 

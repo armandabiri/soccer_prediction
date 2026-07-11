@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from html import escape
 
-from soccer_prediction.models import MatchForecast, ScorelineGrid
+from soccer_prediction.models import BettingStrategy, MatchForecast, ScorelineGrid
 from soccer_prediction.reporting.html_analysis import confidence_interval_section, scenario_section
 from soccer_prediction.reporting.html_components import (
     _CSS,
@@ -17,10 +17,17 @@ from soccer_prediction.reporting.html_components import (
 )
 from soccer_prediction.reporting.html_context import context_section
 from soccer_prediction.reporting.html_model_comparison import ensemble_heatmap_section, model_comparison_section
+from soccer_prediction.reporting.html_strategy import strategy_section
 
 __all__ = ["render_html", "example_usage", "main"]
 
-def render_html(forecast: MatchForecast, *, title: str | None = None, generated_at: datetime | None = None) -> str:
+def render_html(
+    forecast: MatchForecast,
+    *,
+    title: str | None = None,
+    generated_at: datetime | None = None,
+    strategy: BettingStrategy | None = None,
+) -> str:
     """Render a MatchForecast as a styled, self-contained HTML document."""
     home = escape(forecast.fixture.home_team)
     away = escape(forecast.fixture.away_team)
@@ -38,6 +45,7 @@ def render_html(forecast: MatchForecast, *, title: str | None = None, generated_
         _knockout_section(forecast, home, away),
         _goals_section(forecast),
         _score_section(forecast.correct_score),
+        strategy_section(strategy),
         _half_section(forecast, home, away),
         _corners_section(forecast, home, away),
         _cards_section(forecast),

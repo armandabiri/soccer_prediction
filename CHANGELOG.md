@@ -2,6 +2,17 @@
 
 All notable changes to `soccer-prediction` are documented here. This project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Versioned executable quote snapshots and typed `Decimal` strategy contracts.
+- Uncertainty-adjusted value screening, constrained bankroll allocation, live
+  correct-score exits, pathwise recovery, and three risk presets.
+- Optional strategy content in all report formats plus CLI strategy flags.
+- Fixture reports now include an explicitly labeled static $10 demonstration;
+  current executable quotes remain required for real decisions.
+
 ## [0.1.0] - 2026-07-07
 
 Initial release.

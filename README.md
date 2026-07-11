@@ -15,6 +15,7 @@ Forecast soccer matches — with the **FIFA World Cup 2026** as the headline use
 - [Package Layout](#package-layout)
 - [Getting Started](#getting-started)
 - [Quick Start](#quick-start)
+- [Price-aware betting strategy reports](#price-aware-betting-strategy-reports)
 - [Example: Switzerland vs Colombia](#example-switzerland-vs-colombia)
 - [CLI Reference](#cli-reference)
 - [Public API Reference](#public-api-reference)
@@ -155,6 +156,7 @@ soccer_prediction/
   ingest/                  # record normalization and validation
   features/                 # team rate computation (recency-weighted, shrunk)
   predictors/                 # Goal ensembles/simulations + corners/cards/half-time/knockout/scorers models
+  strategy/                      # Quote validation, value, allocation, live exits, paths, presets
   models/                        # typed dataclasses: matches, teams, players, predictions
   calibration/                     # walk-forward backtesting + RPS/log-loss/Brier metrics
   cli/                                # Typer app: predict, fetch, backtest
@@ -208,9 +210,53 @@ Run the bundled World Cup 2026 example:
 python -m soccer_prediction
 ```
 
+## Price-aware betting strategy reports
+
+An optional strategy layer compares model probabilities with a versioned JSON
+snapshot of executable asks, bids, depth, fees, tick sizes, and quantity steps.
+It produces a constrained bankroll allocation, live correct-score exit ladder,
+pathwise capital-recovery table, and conservative/balanced/aggressive
+comparisons. It never places orders, and keeps cash uninvested when no quote
+clears the uncertainty and execution-cost margin.
+
+```python
+from decimal import Decimal
+
+from soccer_prediction import build_betting_strategy, forecast_fixture, load_quote_snapshot
+from soccer_prediction.models import StrategyRequest
+from soccer_prediction.reporting import render_markdown
+
+forecast = forecast_fixture("Norway", "England", source="bundled_nor_eng", neutral_venue=True)
+quotes = load_quote_snapshot("quotes.json")
+strategy = build_betting_strategy(
+    forecast,
+    quotes,
+    request=StrategyRequest(bankroll=Decimal("10.00"), plan="balanced"),
+)
+print(render_markdown(forecast, strategy=strategy))
+```
+
+See [docs/api.md](docs/api.md) and the complete calculation contract in
+[docs/betting-strategy-math.md](docs/betting-strategy-math.md).
+
+```bash
+soccer-predict predict --home Norway --away England --source bundled_nor_eng \
+  --quotes quotes.json --bankroll 10.00 --strategy-plan balanced \
+  --format html --output reports/norway_england.html
+```
+
+The package uses asks plus costs for purchase eligibility and bid-side proceeds
+for exits. Refresh the snapshot after every goal. Unfilled limit orders are not
+recovered cash, and recovering one position is not the same as recovering all
+active positions or the full bankroll.
+
 ## Example: Switzerland vs Colombia
 
-The `soccer_prediction.example` package ships offline, illustrative history for both national teams and forecasts the fixture end to end, writing an HTML and a Markdown report.
+The `soccer_prediction.example` package ships offline, illustrative history and
+an explicitly labeled static quote snapshot. Its HTML and Markdown reports
+include the $10 balanced allocation, live score exits, major paths, and all
+three risk presets. Replace the demo quotes before using this workflow for a
+current market.
 
 ```python
 from soccer_prediction.example import run_switzerland_colombia, write_reports, build_forecast
@@ -281,7 +327,7 @@ openfootball carries goals + half-time scores (so scoreline, 1X2, BTTS, over/und
 
 | Command | Purpose | Key options |
 | --- | --- | --- |
-| `soccer-predict predict` | Forecast a fixture | `--home`, `--away`, `--model` (`ensemble`/`dixon_coles`/`poisson`/`negative_binomial`/`bivariate_poisson`/`monte_carlo`), `--source`, `--as-of YYYY-MM-DD`, `--neutral-venue`, `--format`, `--output <file>` |
+| `soccer-predict predict` | Forecast; optionally add a price-aware strategy | `--home`, `--away`, `--model`, `--source`, `--as-of`, `--neutral-venue`, `--format`, `--output`, `--quotes`, `--bankroll`, `--strategy-plan`, `--safety-margin`, `--slippage`, `--reserve-pct`, `--max-quote-age` |
 | `soccer-predict fetch` | Fetch team history (placeholder wiring) | `--team`, `--competition` |
 | `soccer-predict backtest` | Backtest a model (placeholder wiring) | `--competition`, `--metric` |
 
@@ -295,6 +341,8 @@ The library surface is small and typed:
 | --- | --- | --- |
 | `forecast_fixture(home, away, *, model="ensemble", source="auto", as_of=None, neutral_venue=False)` | `soccer_prediction` | Forecast every market; `as_of` prevents future-data leakage and `neutral_venue` removes home-field effects. |
 | `predict_match(home, away, market, *, model="ensemble", source="auto", as_of=None, neutral_venue=False)` | `soccer_prediction` | Forecast a single named market with the same date and venue controls. |
+| `load_quote_snapshot(path)` | `soccer_prediction` | Validate a version-1 executable quote JSON file. |
+| `build_betting_strategy(forecast, quotes, *, request=None, live_context=None)` | `soccer_prediction` | Build the immutable allocation/live-exit/path strategy used by all report formats. |
 | `MatchForecast` | `soccer_prediction.models` | Result type: selected and ensemble grids, markets, all-model `scenario_analysis`, context, scorers, and history. |
 | `DataSource`, `register_source` | `soccer_prediction.datasources` | Protocol and decorator for adding a new historical-data adapter. |
 | `Predictor`, `register_model` | `soccer_prediction.predictors` | Protocol and decorator for adding a new scoreline model. |

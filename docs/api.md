@@ -46,6 +46,42 @@ Return a single market: `result`, `over_under`, `btts`, or any key from `derive_
 - `render_html(forecast, *, title=None) -> str` — self-contained, theme-aware HTML document.
 - `render_json(forecast) -> str`
 
+Each renderer accepts an optional `strategy=BettingStrategy`. Without it, the
+forecast-only output is unchanged. With it, reports include quote provenance,
+allocation, live exits, path P&L, capital recovery, and preset comparisons;
+JSON adds a `betting_strategy` key.
+
+## Price-aware strategy
+
+### `load_quote_snapshot(path) -> QuoteSnapshot`
+
+Load schema-version 1 JSON containing `venue`, timezone-aware `observed_at`, and
+contracts with `market`, `selection`, executable `ask`/optional `bid`, depth,
+tick, quantity step, fee rates, and settlement identity. A reciprocal `no_bid`
+may supply an ask. Invalid, crossed, duplicated, or malformed quotes raise
+`ValueError`.
+
+### `build_betting_strategy(forecast, quotes, *, request=None, live_context=None) -> BettingStrategy`
+
+Build one immutable result for every renderer. `StrategyRequest` defaults to a
+`Decimal("10.00")` bankroll, balanced plan, 3% probability safety margin, and
+20% reserve. Quote age defaults to 3,600 seconds; use `None` only for explicitly
+static demonstrations. `LiveMatchContext` accepts bounded scoring-rate
+multipliers, red cards, defending/pressing states, injuries, substitutions,
+pressure, and added time; the package does not infer those live observations.
+
+| Strategy type | Purpose |
+| --- | --- |
+| `ContractQuote`, `QuoteSnapshot` | Executable price/depth/provenance input |
+| `StrategyRequest`, `LiveMatchContext` | Bankroll, plan, costs, freshness, and live assumptions |
+| `ContractEvaluation`, `Allocation` | Fair value, net edge, exact quantity, loss, and payout |
+| `ExitStage`, `LiveScorePlan` | Fair value, limit price, fraction, cash, and goal handling |
+| `PathLedgerRow`, `PresetSummary` | Cumulative recovery and plan comparisons |
+| `BettingStrategy` | Complete schema-versioned result |
+
+See `docs/betting-strategy-math.md` for formulas and invariants. This surface
+does not fetch venue quotes, place orders, or verify legal eligibility.
+
 ## Extension points
 
 - `soccer_prediction.datasources.base`: `DataSource` protocol, `register_source(name)`, `get_source(name)`, `list_sources()`.

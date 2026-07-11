@@ -68,7 +68,7 @@ def _recent_games(value: object) -> tuple[PlayerGame, ...]:
     for raw in cast("list[object]", value):
         if not isinstance(raw, list):
             raise ValueError("each recent game must be a [played, goals, assists] triple")
-        entry = cast("list[Any]", raw)
+        entry = raw
         if len(entry) != 3:
             raise ValueError("each recent game must be a [played, goals, assists] triple")
         played, goals, assists = entry

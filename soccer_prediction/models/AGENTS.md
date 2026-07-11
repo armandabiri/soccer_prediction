@@ -17,6 +17,7 @@ For full user-facing documentation see [README.md](../../README.md).
 | Player data | `player.py` | `PlayerStats`, `PlayerMarketPrediction`, `ScorerPrediction` |
 | Prediction results | `prediction.py` | `ScorelineGrid`, `MarketPrediction`, `PerHalfPrediction`, `CornersPrediction`, `CardsPrediction`, `KnockoutPrediction`, `MatchForecast` |
 | Team identity/rates | `team.py` | `Team`, `TeamRates` |
+| Strategy contracts | `strategy.py` | Quotes, requests, evaluations, allocations, live exits, path ledgers, presets, and `BettingStrategy` |
 | Public facade | `__init__.py` | Re-exports every type above |
 
 ## 3. Entry points
@@ -26,6 +27,7 @@ For full user-facing documentation see [README.md](../../README.md).
 ## 4. Key concepts for code changes
 
 - All dataclasses are `@dataclass(frozen=True, slots=True)` — instances are immutable; construct a new instance rather than mutating fields (`match.py` Lines 12, 32, 44; `player.py` Lines 17, 29, 43; `prediction.py` Lines 29, 87, 98, 112, 125, 136, 152; `team.py` Lines 11, 20).
+- Strategy price and money fields are `Decimal`; snapshots require schema version 1 and timezone-aware provenance. Renderers consume a completed `BettingStrategy` rather than recalculating money.
 - `ScorelineGrid.__post_init__` (`prediction.py` Lines 34-39) validates that `probabilities` matches `home_goals_max + 1` rows and `away_goals_max + 1` columns; build grids only through `poisson_grid()` in `soccer_prediction/predictors/poisson.py` rather than constructing them by hand.
 - `MatchForecast` (`prediction.py` Lines 152-166) is the top-level result type assembled by `public.forecast_fixture`. Its `scorers` and `knockout` fields are `| None`/computed: `scorers` is populated only when the resolved data source implements `PlayerSource` (`soccer_prediction/datasources/base.py`); `knockout` is always computed via `predict_knockout`.
 - `TeamMatchStats` (`match.py` Lines 12-28) is the common record shape every `DataSource` adapter must produce; corner, card, and half-time fields default to `0` when a source cannot supply them, and downstream predictors treat a near-zero observed rate as "absent" and substitute a league-average prior.

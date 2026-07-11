@@ -9,7 +9,20 @@ import pytest
 # Importing the example package registers the bundled offline data sources
 # (`bundled_wc2026`, `bundled_swi_col`) that several tests forecast against.
 import soccer_prediction.example  # noqa: F401
-from soccer_prediction.models import TeamMatchStats
+from soccer_prediction.example.fixture_example import build_forecast, build_strategy
+from soccer_prediction.models import BettingStrategy, MatchForecast, TeamMatchStats
+
+
+@pytest.fixture(scope="session")
+def strategy_forecast() -> MatchForecast:
+    """Return the bundled Norway/England forecast used by strategy tests."""
+    return build_forecast(key="norway_england", live=False)
+
+
+@pytest.fixture(scope="session")
+def betting_strategy(strategy_forecast: MatchForecast) -> BettingStrategy:
+    """Return a complete strategy using the clearly labeled demo quotes."""
+    return build_strategy(strategy_forecast)
 
 
 @pytest.fixture

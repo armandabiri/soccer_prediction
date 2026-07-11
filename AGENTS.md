@@ -18,11 +18,12 @@ For full user-facing documentation see [README.md](README.md).
 | Ingestion | `soccer_prediction/ingest/` | Record normalization and validation before feature computation |
 | Features | `soccer_prediction/features/` | Team rate computation (`rates.py`) with recency weighting and shrinkage |
 | Predictors | `soccer_prediction/predictors/` | `Predictor` protocol/registry (`base.py`) and models: Poisson, Dixon-Coles, corners, cards, half-time, knockout, scorers, markets derivation |
+| Strategy | `soccer_prediction/strategy/` | Quote validation, value screening, bankroll allocation, live exits, path ledgers, presets, and strategy builder |
 | Models | `soccer_prediction/models/` | Typed dataclasses for matches, teams, players, and predictions — see [`soccer_prediction/models/AGENTS.md`](soccer_prediction/models/AGENTS.md) |
 | Calibration | `soccer_prediction/calibration/` | Walk-forward backtesting and evaluation metrics (RPS, log-loss, Brier) |
 | CLI | `soccer_prediction/cli/` | Typer app (`main.py`) with `predict`, `fetch`, `backtest` subcommands |
 | Config | `soccer_prediction/config/` | `AppConfig` loader merging `defaults.yaml` with `SOCCER_PREDICTION_*` env vars |
-| Reporting | `soccer_prediction/reporting/` | Text/JSON/Markdown/HTML forecast renderers |
+| Reporting | `soccer_prediction/reporting/` | Text/JSON/Markdown/HTML forecast and optional strategy renderers |
 | Examples | `soccer_prediction/example/` | Offline worked examples (World Cup 2026, Switzerland vs Colombia) with bundled sample data |
 | Tests | `tests/` | Test suite — see [`tests/AGENTS.md`](tests/AGENTS.md) |
 | Docs | `docs/` | Topic docs: `api.md`, `data-sources.md`, `models.md` |
@@ -32,6 +33,7 @@ For full user-facing documentation see [README.md](README.md).
 - `soccer-predict` (console script) — `pyproject.toml` (Lines 51-52) → `soccer_prediction:main` → `soccer_prediction/cli/main.py` Typer `app`.
 - `python -m soccer_prediction` — `soccer_prediction/__main__.py` (Lines 1-8) runs the bundled World Cup 2026 example via `soccer_prediction.example.run_example`.
 - `forecast_fixture(home, away, *, model="dixon_coles", source="auto")` — `soccer_prediction/public.py`, the primary library entry point that assembles a `MatchForecast`.
+- `build_betting_strategy(forecast, quotes, *, request=None, live_context=None)` — `soccer_prediction/strategy/public.py`; it calculates allocation and exits but never places orders.
 
 ## 4. Environment variables
 
@@ -52,6 +54,8 @@ For full user-facing documentation see [README.md](README.md).
 - Every data source implements the `DataSource` protocol (`fetch_team_history`, `fetch_fixtures`) and registers via `@register_source(name)` in `soccer_prediction/datasources/base.py`. Adapters lacking corner, card, or half-time data hardcode zeros rather than omitting the fields, and downstream predictors (`corners.py`, `cards.py`) fall back to league-average priors when the observed rate is near zero.
 - Every prediction model implements the `Predictor` protocol (`fit`, `predict_scoreline`, `predict_market`) and registers via `@register_model(name)` in `soccer_prediction/predictors/base.py`; `dixon_coles` is the default model in `forecast_fixture`.
 - Sources that also expose squad data implement the optional `PlayerSource` protocol (`fetch_players`) in `soccer_prediction/datasources/base.py`; `forecast_fixture` only attaches `scorers` to the `MatchForecast` when the resolved source satisfies this protocol.
+- Strategy money, prices, fees, and quantities use `Decimal`. Entry screening uses asks plus costs; exit cash uses bid-side targets minus fees. Missing or stale quotes are never replaced by midpoints.
+- `soccer_prediction/example/fixture_example.py::write_reports` includes the packaged `illustrative_demo_not_live` snapshot by default; pass `quote_path` for current quotes or `include_strategy=False` for forecast-only output.
 - Report writers (`soccer_prediction/example/fixture_example.py::write_reports`, `soccer_prediction/example/worldcup2026_live.py::write_wc2026_report`) generate timestamped filenames (`<name>_<YYYY-MM-DD_HH-MM-SS>.{html,md}`) by default; the CLI's `--output` flag always writes to the literal given path instead.
 - `soccer_prediction/example/fixture_example.py::FIXTURES` is the single constant registry of competing team pairs (Switzerland/Colombia, France/Morocco, Argentina/Egypt); each entry owns its own bundled data files and registered source names via `FixtureDataSource`, so adding a fixture never collides with another one's registration.
 - Authored source files are expected to stay under 300 lines per project convention; `soccer_prediction/reporting/html_report.py` currently exceeds this at 387 lines and is a candidate for splitting (for example, extracting the per-market section renderers into a submodule) before further additions.

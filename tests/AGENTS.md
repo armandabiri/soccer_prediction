@@ -19,6 +19,7 @@ For full user-facing documentation see [README.md](../README.md).
 | Predictor tests | `test_predictor_registry.py`, `test_poisson.py`, `test_dixon_coles.py`, `test_markets.py`, `test_half_time.py`, `test_corners.py`, `test_cards.py`, `test_knockout.py`, `test_scorers.py` | One file per registered `Predictor` and the goalscorer/knockout predictors |
 | Calibration tests | `test_backtest.py`, `test_metrics.py` | Walk-forward backtesting and RPS/log-loss/Brier metrics |
 | Surface tests | `test_public.py`, `test_cli.py`, `test_reporting.py` | `forecast_fixture`/`predict_match`, the Typer CLI, and text/JSON/Markdown/HTML rendering |
+| Strategy tests | `test_strategy_models.py`, `test_strategy_quotes.py`, `test_strategy_valuation.py`, `test_strategy_allocation.py`, `test_strategy_live.py`, `test_strategy_paths.py`, `test_strategy_reporting.py`, `test_strategy_cli.py` | Contracts, quotes, edges, risk invariants, live exits, recovery, reports, and CLI |
 | Example/smoke tests | `test_example.py`, `test_smoke.py` | Offline worked examples and package-import smoke checks |
 | Unused fixture data | `fixtures/sample_history.json` | Not referenced by any test file — superseded by `conftest.py::sample_history` and inline per-test data; safe to ignore or remove |
 
@@ -32,6 +33,7 @@ For full user-facing documentation see [README.md](../README.md).
 - `conftest.py` (Lines 9-11) imports `soccer_prediction.example` purely for its side effect of registering the bundled offline data sources (`bundled_wc2026`, `bundled_swi_col`) via `@register_source`; removing that import silently breaks every test that forecasts against those source names.
 - Tests that exercise network-backed sources (`test_worldcup_open.py`, `test_international_results.py`, `test_api_football.py`, `test_football_data_csv.py`) construct the adapter with a local `tmp_path` file or an injected fetcher rather than hitting the real network — follow the same pattern for new adapter tests.
 - `sample_history` (`conftest.py` Lines 15-32) is a small, hand-built Brazil/Argentina history shared across predictor tests; it is intentionally minimal and not the same data as the bundled example JSON under `soccer_prediction/example/data/`.
+- `strategy_forecast` and `betting_strategy` are session fixtures built from bundled Norway/England data and the explicitly non-live demonstration quotes; tests must not treat those prices as current market data.
 
 ## 5. Related
 

@@ -230,7 +230,7 @@ def build_strategy(
     if quote_path is not None:
         snapshot = load_quote_snapshot(quote_path)
     else:
-        resource = resources.files(__package__).joinpath("data/betting_quotes_example.json")
+        resource = resources.files("soccer_prediction.example").joinpath("data/betting_quotes_example.json")
         with resources.as_file(resource) as path:
             snapshot = load_quote_snapshot(path)
     return build_betting_strategy(forecast, snapshot, request=request)

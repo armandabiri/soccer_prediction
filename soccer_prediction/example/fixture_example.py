@@ -221,8 +221,8 @@ def write_reports(
     stamp = generated_at.strftime("%Y-%m-%d_%H-%M-%S")
     out = Path("reports") if output_dir is None else Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
-    html_path = out / f"{spec.key}_{stamp}.html"
-    md_path = out / f"{spec.key}_{stamp}.md"
+    html_path = out / f"{stamp}_{spec.key}.html"
+    md_path = out / f"{stamp}_{spec.key}.md"
     html_path.write_text(render_html(forecast, title=spec.title, generated_at=generated_at), encoding="utf-8")
     md_path.write_text(f"# {spec.title}\n\n{render_markdown(forecast, generated_at=generated_at)}\n", encoding="utf-8")
     return {"html": html_path, "md": md_path}

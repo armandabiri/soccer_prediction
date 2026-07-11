@@ -72,17 +72,32 @@ def _row(label: str, probability: float, color: str | None = None) -> str:
     )
 
 
-def _top_score(grid: ScorelineGrid) -> str:
-    best_label = "0-0"
-    best = -1.0
+def _ranked_scores(grid: ScorelineGrid) -> list[tuple[str, float]]:
+    """Every exact scoreline with its probability, most likely first."""
+    scored: list[tuple[str, float]] = []
     for home_goals, grid_row in enumerate(grid.probabilities):
         for away_goals, probability in enumerate(grid_row):
-            if probability > best:
-                best = probability
-                home_label = f"{home_goals}{'+' if home_goals == grid.home_goals_max else ''}"
-                away_label = f"{away_goals}{'+' if away_goals == grid.away_goals_max else ''}"
-                best_label = f"{home_label}-{away_label}"
-    return best_label
+            home_label = f"{home_goals}{'+' if home_goals == grid.home_goals_max else ''}"
+            away_label = f"{away_goals}{'+' if away_goals == grid.away_goals_max else ''}"
+            scored.append((f"{home_label}-{away_label}", probability))
+    scored.sort(key=lambda item: item[1], reverse=True)
+    return scored
+
+
+def _top_score_tile(grid: ScorelineGrid) -> str:
+    """The likeliest exact score with its probability, plus the two runners-up.
+
+    The joint scoreline distribution is very flat — the mode is typically only
+    ~7-12% likely and the next scores trail it by a hair — so showing the top
+    three keeps the single modal score (often 1-1) from reading as a firm call.
+    """
+    ranked = _ranked_scores(grid)
+    if not ranked:
+        return "0-0"
+    top_label, top_prob = ranked[0]
+    runners = " · ".join(f"{label} {_pct(prob)}" for label, prob in ranked[1:3])
+    runners_html = f'<span class="runners">then {runners}</span>' if runners else ""
+    return f'{top_label} <span class="v-sub">{_pct(top_prob)}</span>{runners_html}'
 
 
 def _tiles(
@@ -96,7 +111,7 @@ def _tiles(
     result = max(((home, home_p), ("Draw", draw_p), (away, away_p)), key=lambda item: item[1])[0]
     tiles = [
         ("Most likely result", escape(result)),
-        ("Likeliest score", _top_score(forecast.correct_score)),
+        ("Likeliest score", _top_score_tile(forecast.correct_score)),
         ("Both teams to score", _pct(forecast.btts.probability)),
         ("Over 2.5 goals", _pct(forecast.over_under.probability)),
     ]
@@ -158,14 +173,7 @@ def _goals_section(forecast: MatchForecast) -> str:
 
 
 def _score_section(grid: ScorelineGrid) -> str:
-    scored: list[tuple[str, float]] = []
-    for home_goals, grid_row in enumerate(grid.probabilities):
-        for away_goals, probability in enumerate(grid_row):
-            home_label = f"{home_goals}{'+' if home_goals == grid.home_goals_max else ''}"
-            away_label = f"{away_goals}{'+' if away_goals == grid.away_goals_max else ''}"
-            scored.append((f"{home_label}-{away_label}", probability))
-    scored.sort(key=lambda item: item[1], reverse=True)
-    rows = "".join(_row(label, probability) for label, probability in scored[:6])
+    rows = "".join(_row(label, probability) for label, probability in _ranked_scores(grid)[:6])
     return _table("Most likely correct scores", "Score", rows)
 
 
@@ -211,7 +219,10 @@ def _corners_section(forecast: MatchForecast, home: str, away: str) -> str:
     )
     header = '<thead><tr><th>Corners market</th><th class="n">Expected</th><th class="n">Value</th></tr></thead>'
     note = _prior_note(forecast, "corners", "corner")
-    return f'<h2>Corners</h2><div class="card"><table>{header}<tbody>{body}</tbody></table>{note}</div>'
+    return (
+        f'<h2>Corners{_prior_badge(forecast, "corners")}</h2>'
+        f'<div class="card"><table>{header}<tbody>{body}</tbody></table>{note}</div>'
+    )
 
 
 def _cards_section(forecast: MatchForecast) -> str:
@@ -229,21 +240,35 @@ def _cards_section(forecast: MatchForecast) -> str:
     )
     header = '<thead><tr><th>Cards market</th><th class="n">Value</th></tr></thead>'
     note = _prior_note(forecast, "cards", "card")
-    return f'<h2>Cards</h2><div class="card"><table>{header}<tbody>{body}</tbody></table>{note}</div>'
+    return (
+        f'<h2>Cards{_prior_badge(forecast, "cards")}</h2>'
+        f'<div class="card"><table>{header}<tbody>{body}</tbody></table>{note}</div>'
+    )
+
+
+def _source_lacks_data(forecast: MatchForecast, kind: str) -> bool:
+    """True when the loaded history carries no corner (or card) columns at all."""
+    if not forecast.history:
+        return False
+    if kind == "corners":
+        return all(record.corners_for == 0 and record.corners_against == 0 for record in forecast.history)
+    return all(record.yellows == 0 and record.reds == 0 for record in forecast.history)
+
+
+def _prior_badge(forecast: MatchForecast, kind: str) -> str:
+    """A small inline heading badge marking prior-based (not team-specific) markets."""
+    if not _source_lacks_data(forecast, kind):
+        return ""
+    return ' <span class="prior-badge" title="Source has no per-match data for this market">≈ model prior</span>'
 
 
 def _prior_note(forecast: MatchForecast, kind: str, label: str) -> str:
-    if not forecast.history:
-        return ""
-    if kind == "corners":
-        empty = all(record.corners_for == 0 and record.corners_against == 0 for record in forecast.history)
-    else:
-        empty = all(record.yellows == 0 and record.reds == 0 for record in forecast.history)
-    if not empty:
+    if not _source_lacks_data(forecast, kind):
         return ""
     return (
-        f'<p class="foot">The data source carries no {label} data, so league-average priors are '
-        f'shown here (not team-specific). Use source="api_football" (free key) for real {label} markets.</p>'
+        f'<p class="foot">The data source carries no {label} data, so identical league-average priors are '
+        f'shown for every team here (not team-specific), which is why these numbers match across fixtures. '
+        f'Use source="api_football" (free key), or the bundled offline data, for real {label} markets.</p>'
     )
 
 

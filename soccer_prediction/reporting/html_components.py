@@ -31,6 +31,12 @@ h3 { font-size:.92rem; margin:18px 0 8px; color:var(--muted); }
 .tile { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; }
 .tile .k { color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; }
 .tile .v { font-size:1.35rem; font-weight:700; margin-top:4px; }
+.tile .v .v-sub { font-size:.85rem; font-weight:600; color:var(--muted); }
+.tile .v .runners { display:block; margin-top:3px; font-size:.72rem; font-weight:400; color:var(--muted);
+  font-variant-numeric:tabular-nums; }
+.prior-badge { font-size:.62rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+  vertical-align:middle; color:var(--muted); background:var(--bar); border:1px solid var(--line);
+  border-radius:999px; padding:2px 8px; }
 .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:6px 16px 14px; }
 table { width:100%; border-collapse:collapse; }
 th,td { text-align:left; padding:9px 6px; border-bottom:1px solid var(--line); }

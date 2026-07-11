@@ -1,0 +1,23 @@
+[
+  {"team": "Norway", "opponent": "Kazakhstan", "date": "2024-09-06", "is_home": true, "goals_for": 0, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 6, "corners_against": 3, "yellows": 1, "reds": 0},
+  {"team": "Norway", "opponent": "Austria", "date": "2024-09-09", "is_home": false, "goals_for": 1, "goals_against": 2, "ht_goals_for": 0, "ht_goals_against": 1, "corners_for": 4, "corners_against": 6, "yellows": 2, "reds": 0},
+  {"team": "Norway", "opponent": "Slovenia", "date": "2024-10-12", "is_home": true, "goals_for": 3, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 7, "corners_against": 3, "yellows": 1, "reds": 0},
+  {"team": "Norway", "opponent": "Kazakhstan", "date": "2024-10-15", "is_home": false, "goals_for": 2, "goals_against": 1, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 6, "corners_against": 4, "yellows": 2, "reds": 0},
+  {"team": "Norway", "opponent": "Austria", "date": "2024-11-17", "is_home": true, "goals_for": 1, "goals_against": 5, "ht_goals_for": 0, "ht_goals_against": 2, "corners_for": 4, "corners_against": 8, "yellows": 2, "reds": 1},
+  {"team": "Norway", "opponent": "Israel", "date": "2025-03-25", "is_home": true, "goals_for": 4, "goals_against": 2, "ht_goals_for": 2, "ht_goals_against": 1, "corners_for": 8, "corners_against": 4, "yellows": 1, "reds": 0},
+  {"team": "Norway", "opponent": "Moldova", "date": "2025-06-07", "is_home": false, "goals_for": 1, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 7, "corners_against": 2, "yellows": 1, "reds": 0},
+  {"team": "Norway", "opponent": "Italy", "date": "2025-06-06", "is_home": true, "goals_for": 3, "goals_against": 0, "ht_goals_for": 3, "ht_goals_against": 0, "corners_for": 6, "corners_against": 4, "yellows": 1, "reds": 0},
+  {"team": "Norway", "opponent": "Estonia", "date": "2025-09-06", "is_home": true, "goals_for": 5, "goals_against": 0, "ht_goals_for": 2, "ht_goals_against": 0, "corners_for": 9, "corners_against": 1, "yellows": 0, "reds": 0},
+  {"team": "Norway", "opponent": "Israel", "date": "2025-09-09", "is_home": false, "goals_for": 5, "goals_against": 0, "ht_goals_for": 3, "ht_goals_against": 0, "corners_for": 8, "corners_against": 2, "yellows": 1, "reds": 0},
+
+  {"team": "England", "opponent": "Netherlands", "date": "2024-07-10", "is_home": true, "goals_for": 2, "goals_against": 1, "ht_goals_for": 0, "ht_goals_against": 1, "corners_for": 6, "corners_against": 4, "yellows": 1, "reds": 0},
+  {"team": "England", "opponent": "Spain", "date": "2024-07-14", "is_home": false, "goals_for": 1, "goals_against": 2, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 5, "corners_against": 6, "yellows": 2, "reds": 0},
+  {"team": "England", "opponent": "Ireland", "date": "2024-09-07", "is_home": false, "goals_for": 2, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 7, "corners_against": 3, "yellows": 1, "reds": 0},
+  {"team": "England", "opponent": "Finland", "date": "2024-09-10", "is_home": true, "goals_for": 2, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 8, "corners_against": 2, "yellows": 1, "reds": 0},
+  {"team": "England", "opponent": "Greece", "date": "2024-10-10", "is_home": true, "goals_for": 1, "goals_against": 2, "ht_goals_for": 0, "ht_goals_against": 1, "corners_for": 6, "corners_against": 5, "yellows": 2, "reds": 0},
+  {"team": "England", "opponent": "Greece", "date": "2024-11-14", "is_home": false, "goals_for": 3, "goals_against": 0, "ht_goals_for": 2, "ht_goals_against": 0, "corners_for": 7, "corners_against": 3, "yellows": 1, "reds": 0},
+  {"team": "England", "opponent": "Ireland", "date": "2024-11-17", "is_home": true, "goals_for": 5, "goals_against": 0, "ht_goals_for": 3, "ht_goals_against": 0, "corners_for": 9, "corners_against": 1, "yellows": 0, "reds": 0},
+  {"team": "England", "opponent": "Albania", "date": "2025-03-21", "is_home": true, "goals_for": 2, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 7, "corners_against": 3, "yellows": 1, "reds": 0},
+  {"team": "England", "opponent": "Latvia", "date": "2025-03-24", "is_home": false, "goals_for": 3, "goals_against": 0, "ht_goals_for": 1, "ht_goals_against": 0, "corners_for": 8, "corners_against": 2, "yellows": 1, "reds": 0},
+  {"team": "England", "opponent": "Andorra", "date": "2025-06-07", "is_home": false, "goals_for": 1, "goals_against": 0, "ht_goals_for": 0, "ht_goals_against": 0, "corners_for": 9, "corners_against": 1, "yellows": 1, "reds": 0}
+]

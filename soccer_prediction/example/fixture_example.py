@@ -107,9 +107,29 @@ FIXTURES: dict[str, FixtureSpec] = {
         live_source="esp_bel_2024",
         title="Spain vs Belgium - Match Forecast (2024 to date)",
     ),
+    "argentina_switzerland": FixtureSpec(
+        key="argentina_switzerland",
+        home="Argentina",
+        away="Switzerland",
+        history_file="data/argentina_switzerland_history.json",
+        players_file="data/argentina_switzerland_players.json",
+        bundled_source="bundled_arg_swi",
+        live_source="arg_swi_2024",
+        title="Argentina vs Switzerland - Match Forecast (2024 to date)",
+    ),
+    "norway_england": FixtureSpec(
+        key="norway_england",
+        home="Norway",
+        away="England",
+        history_file="data/norway_england_history.json",
+        players_file="data/norway_england_players.json",
+        bundled_source="bundled_nor_eng",
+        live_source="nor_eng_2024",
+        title="Norway vs England - Match Forecast (2024 to date)",
+    ),
 }
 
-DEFAULT_FIXTURE = "spain_belgium"
+DEFAULT_FIXTURE = "argentina_switzerland"
 
 
 class FixtureDataSource:

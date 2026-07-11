@@ -51,6 +51,9 @@ def test_switzerland_colombia_reports_written(tmp_path: Path) -> None:
     assert 'class="ptree"' in html  # vertical scoring-path tree
     assert 'class="ptree-branches"' in html
     assert 'class="plan-card"' in html  # side-by-side risk-plan cards
+    # Betting markets settle on the regulation-time result, stated explicitly.
+    assert "regulation-time (90') result" in html
+    assert 'class="settle-note"' in html
     assert "Switzerland vs Colombia" in markdown
     assert "### Betting value & bankroll allocation" in markdown
     assert "### Goalscorers &amp; assists" in markdown or "### Goalscorers & assists" in markdown

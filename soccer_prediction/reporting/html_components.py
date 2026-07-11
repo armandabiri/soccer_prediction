@@ -149,6 +149,8 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
   vertical-align:middle; border:1px solid rgba(128,128,128,.35); }
 .legend { display:flex; flex-wrap:wrap; gap:16px; margin:-8px 0 18px; font-size:.85rem; }
 .chip { display:inline-flex; align-items:center; }
+.settle-note { margin:2px 0 12px; padding:9px 12px; border-left:4px solid var(--accent); background:var(--bar);
+  border-radius:0 8px 8px 0; font-size:.86rem; }
 :root { --profit:#1a7f4b; --loss:#b91c1c; }
 :root[data-theme="dark"] { --profit:#3ddc84; --loss:#f87171; }
 @media (prefers-color-scheme: dark) { :root { --profit:#3ddc84; --loss:#f87171; } }
@@ -176,15 +178,16 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
   padding:2px 7px; border-radius:999px; background:var(--bar); color:var(--muted); }
 .ladder-badge.active { background:color-mix(in srgb,var(--profit) 22%,transparent); color:var(--profit); }
 .ladder-steps { display:grid; gap:7px; }
-.ladder-step { display:grid; grid-template-columns:54px 1fr auto; gap:7px; align-items:center; font-size:.72rem; }
+.ladder-step { display:grid; grid-template-columns:54px 1fr 66px; gap:7px; align-items:center; font-size:.72rem; }
 .ladder-step .lbl { color:var(--muted); }
-.ladder-step .track { position:relative; height:9px; border-radius:5px; background:var(--bar); }
-.ladder-step .track i { position:absolute; top:0; bottom:0; width:3px; border-radius:2px; background:var(--muted); }
-.ladder-step .track b { position:absolute; top:0; bottom:0; border-radius:5px;
+.ladder-step .track { position:relative; height:10px; border-radius:5px; background:var(--bar); overflow:hidden; }
+.ladder-step .track b { position:absolute; left:0; top:0; bottom:0; border-radius:5px;
   background:color-mix(in srgb,var(--profit) 45%,transparent); }
 .ladder-step.now .track b { background:var(--profit); }
-.ladder-step .amt { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.ladder-step.now .amt { color:var(--profit); font-weight:700; }
+.ladder-step .amt { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; line-height:1.15; }
+.ladder-step .amt .pctv { font-weight:700; font-size:.82rem; }
+.ladder-step .amt .sub3 { display:block; color:var(--muted); font-size:.64rem; font-weight:400; }
+.ladder-step.now .amt .pctv { color:var(--profit); }
 .ladder-foot { margin:8px 0 0; font-size:.7rem; color:var(--muted); }
 .ptree { display:flex; flex-direction:column; align-items:center; gap:0; padding:14px 0 4px; overflow-x:auto; }
 .ptree-root { display:inline-flex; flex-direction:column; align-items:center; }

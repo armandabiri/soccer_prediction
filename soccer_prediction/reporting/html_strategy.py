@@ -37,6 +37,36 @@ def _details(summary: str, inner: str) -> str:
     return f'<details class="details-toggle"><summary>{escape(summary)}</summary>{inner}</details>'
 
 
+def _settlement_label(settlement: str) -> str:
+    """Human wording for one quote's settlement basis."""
+    pretty = settlement.replace("regulation_time_", "reg. 90' ").replace("_", " ")
+    return pretty.strip() or "unspecified"
+
+
+def _settlement_banner(strategy: BettingStrategy) -> str:
+    """A prominent note stating what result these markets settle on.
+
+    Every non-live market here is priced from the model's regulation-time (90')
+    scoreline grid and the quotes settle on the regulation result — extra time
+    and penalties do NOT count. Whoever *advances* in a knockout is a separate
+    market shown under "Extra time & penalties", never priced in this section.
+    """
+    kinds = {quote.settlement for quote in (item.quote for item in strategy.evaluations)}
+    reg_time = any(kind.startswith("regulation_time") for kind in kinds)
+    lead = (
+        "These markets settle on the <strong>regulation-time (90') result</strong> — "
+        "extra time and penalties do <strong>not</strong> count."
+        if reg_time
+        else "Check each quote's settlement basis before betting."
+    )
+    return (
+        '<p class="settle-note">' + lead +
+        " A knockout can still be level here (the draw is a real outcome); who advances "
+        "after extra time or penalties is a separate market, shown under "
+        "“Extra time &amp; penalties”, and is not priced below.</p>"
+    )
+
+
 # ---------------------------------------------------------------------------
 # 1. Betting value & bankroll allocation — horizontal net-edge bar chart
 # ---------------------------------------------------------------------------
@@ -85,6 +115,7 @@ def _allocations(strategy: BettingStrategy) -> str:
                 _money(position.maximum_loss if position else Decimal(0)),
                 _money(position.gross_payout if position else Decimal(0)),
                 _money(position.net_profit_if_win if position else Decimal(0)),
+                _settlement_label(item.quote.settlement),
                 item.reason,
                 item.intent,
             )
@@ -105,14 +136,14 @@ def _allocations(strategy: BettingStrategy) -> str:
     table = _table(
         (
             "Market / score", "Model", "Ask", "Fair", "Max buy", "Net edge", "Allocated", "Contracts",
-            "Max loss", "Gross", "Net win", "Reason", "Intent",
+            "Max loss", "Gross", "Net win", "Settles on", "Reason", "Intent",
         ),
         table_rows,
     )
     table_details = _details("Show full pricing table (every quote, every column)", table)
     return (
         "<h2>Betting value &amp; bankroll allocation</h2>"
-        f'<div class="card">{intro}{chart}{table_details}</div>'
+        f'<div class="card">{_settlement_banner(strategy)}{intro}{chart}{table_details}</div>'
     )
 
 
@@ -120,21 +151,27 @@ def _allocations(strategy: BettingStrategy) -> str:
 # 2. Live correct-score exit ladder — per-score mini timeline cards
 # ---------------------------------------------------------------------------
 
-def _stage_bar(stage: ExitStage, reference: Decimal) -> str:
+def _stage_bar(stage: ExitStage, total_contracts: Decimal) -> str:
+    """One exit step whose track fill is the share of the position sold here.
+
+    The bar length = contracts sold this window / total held, so the plan's
+    "sell 40% now, 35%, then 25%" reads straight off the widths. The dollar
+    value and the price mechanics move to the label and tooltip.
+    """
     executable = stage.executable_now
-    fair_pct = float(min(Decimal(100), stage.fair_value / reference * 100)) if reference else 0.0
-    bid_pct = (
-        float(min(Decimal(100), stage.current_bid / reference * 100)) if stage.current_bid and reference else 0.0
-    )
+    share = float(stage.contracts / total_contracts * 100) if total_contracts else 0.0
     now_cls = " now" if executable else ""
     now_text = "fillable now" if executable else "not yet fillable"
+    contracts = f"{stage.contracts:f}".rstrip("0").rstrip(".") or "0"
     return (
         f'<div class="ladder-step{now_cls}">'
         f'<span class="lbl">{escape(stage.minute_range)}</span>'
-        f'<span class="track" title="fair {_money(stage.fair_value)}, bid {_money(stage.current_bid)}, '
-        f'limit {_money(stage.target_price)} — {now_text}">'
-        f'<i style="left:{fair_pct:.1f}%"></i><b style="width:{bid_pct:.1f}%"></b></span>'
-        f'<span class="amt">{_money(stage.cash_received)}</span>'
+        f'<span class="track" title="sell {share:.0f}% of the position ({contracts} contracts) at '
+        f'limit {_money(stage.target_price)}; fair {_money(stage.fair_value)}, bid {_money(stage.current_bid)} '
+        f"— {now_text}\">"
+        f'<b style="width:{share:.1f}%"></b></span>'
+        f'<span class="amt"><span class="pctv">{share:.0f}%</span>'
+        f'<span class="sub3">{contracts}c · {_money(stage.cash_received)}</span></span>'
         "</div>"
     )
 
@@ -144,8 +181,8 @@ def _live(strategy: BettingStrategy) -> str:
         return ""
     cards: list[str] = []
     for item in strategy.live_scores:
-        reference = max((stage.fair_value for stage in item.stages), default=Decimal(1)) or Decimal(1)
-        steps = "".join(_stage_bar(stage, reference) for stage in item.stages)
+        total = sum((stage.contracts for stage in item.stages), Decimal(0))
+        steps = "".join(_stage_bar(stage, total) for stage in item.stages)
         active_cls = "" if item.position_active else " inactive"
         badge = (
             '<span class="ladder-badge active">position open</span>'
@@ -161,8 +198,9 @@ def _live(strategy: BettingStrategy) -> str:
         )
     legend = (
         f'<p class="ladder-foot">Assumptions: {escape(strategy.live_scores[0].assumptions)} '
-        "Each row is one planned exit stage; the tick marks fair value, the filled bar is the current bid "
-        "(both scaled to that card's largest fair value), and a highlighted row is executable right now.</p>"
+        "Each row is one planned exit window; the bar and the big number are the share of the position "
+        "sold in that window (contracts and cash-if-filled below), and a highlighted row is executable "
+        "against the current bid right now.</p>"
     )
     return (
         '<h2>Live correct-score exit ladder</h2>'

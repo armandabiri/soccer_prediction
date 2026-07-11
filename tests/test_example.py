@@ -45,6 +45,12 @@ def test_switzerland_colombia_reports_written(tmp_path: Path) -> None:
     assert "James Rodriguez" in html
     assert "Betting value &amp; bankroll allocation" in html
     assert "Live correct-score exit ladder" in html
+    # The strategy sections render as visual charts, not just tables.
+    assert 'class="edge-chart"' in html  # net-edge bar chart
+    assert 'class="ladder-card"' in html  # per-score exit ladder cards
+    assert 'class="ptree"' in html  # vertical scoring-path tree
+    assert 'class="ptree-branches"' in html
+    assert 'class="plan-card"' in html  # side-by-side risk-plan cards
     assert "Switzerland vs Colombia" in markdown
     assert "### Betting value & bankroll allocation" in markdown
     assert "### Goalscorers &amp; assists" in markdown or "### Goalscorers & assists" in markdown

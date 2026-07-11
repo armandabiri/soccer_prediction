@@ -22,6 +22,13 @@ def _prob(value: Decimal | None) -> str:
     return "—" if value is None else f"{value:.1%}"
 
 
+def _pct_of(value: Decimal, whole: Decimal) -> str:
+    """A value expressed as a percent of the bankroll X (blank-safe)."""
+    if whole == 0:
+        return "—"
+    return f"{value / whole * 100:.1f}%"
+
+
 def _table(headers: tuple[str, ...], rows: Sequence[tuple[str, ...]]) -> str:
     head = "".join(f"<th>{escape(value)}</th>" for value in headers)
     body = "".join(
@@ -72,6 +79,7 @@ def _settlement_banner(strategy: BettingStrategy) -> str:
 # ---------------------------------------------------------------------------
 
 def _allocations(strategy: BettingStrategy) -> str:
+    bankroll = strategy.request.bankroll
     allocated: dict[str, Allocation] = {item.evaluation.quote.key: item for item in strategy.allocations}
     max_edge = max(
         (abs(item.net_edge) for item in strategy.evaluations if item.net_edge is not None),
@@ -93,7 +101,13 @@ def _allocations(strategy: BettingStrategy) -> str:
             else f"right:50%; width:{width_pct:.1f}%; background:{color};"
         )
         tag = '<span class="tag buy">bought</span>' if bought else ""
-        detail = f"allocated {_money(position.amount)}" if position else escape(item.intent)
+        if position is not None:
+            detail = (
+                f'<span class="pctv">{_pct_of(position.amount, bankroll)} of X</span>'
+                f'<span class="sub3">{_money(position.amount)}</span>'
+            )
+        else:
+            detail = escape(item.intent)
         chart_rows.append(
             '<div class="edge-row">'
             f'<div class="edge-name" title="{escape(item.reason, quote=True)}">'
@@ -110,6 +124,7 @@ def _allocations(strategy: BettingStrategy) -> str:
                 _money(item.fair_price),
                 _money(item.max_buy_price),
                 _money(item.net_edge),
+                _pct_of(position.amount, bankroll) if position else "—",
                 _money(position.amount if position else Decimal(0)),
                 str(position.contracts if position else 0),
                 _money(position.maximum_loss if position else Decimal(0)),
@@ -120,22 +135,29 @@ def _allocations(strategy: BettingStrategy) -> str:
                 item.intent,
             )
         )
-    intro = (
-        f'<p class="foot">Venue <strong>{escape(strategy.venue)}</strong>; quote observed '
-        f'{escape(strategy.quote_observed_at.isoformat())}; plan {escape(strategy.request.plan)}; '
-        f'cash retained {_money(strategy.uninvested_cash)}.</p>'
+    deployed = bankroll - strategy.uninvested_cash
+    deployed_pct = float(deployed / bankroll * 100) if bankroll else 0.0
+    cash_pct = max(0.0, 100.0 - deployed_pct)
+    split = (
+        f'<div class="split-bar" title="of your bankroll X = {_money(bankroll)}">'
+        f'<span class="dep" style="width:{deployed_pct:.1f}%">deployed {deployed_pct:.0f}%</span>'
+        f'<span class="csh" style="width:{cash_pct:.1f}%">cash {cash_pct:.0f}%</span></div>'
+        f'<p class="foot">Bankroll <strong>X = {_money(bankroll)}</strong>; deployed '
+        f'{_pct_of(deployed, bankroll)} ({_money(deployed)}), cash {_pct_of(strategy.uninvested_cash, bankroll)} '
+        f'({_money(strategy.uninvested_cash)}). Venue <strong>{escape(strategy.venue)}</strong>; '
+        f'plan {escape(strategy.request.plan)}; quoted {escape(strategy.quote_observed_at.isoformat())}.</p>'
     )
     legend = (
         '<div class="ptree-legend">'
         '<span><span class="sw" style="background:var(--profit)"></span>'
-        "positive net edge (bought where affordable)</span>"
+        "positive net edge (bought — big number is that bet's share of X)</span>"
         '<span><span class="sw" style="background:var(--loss)"></span>negative or no edge — no bet</span>'
         "</div>"
     )
     chart = f'<div class="edge-chart">{"".join(chart_rows)}</div>{legend}'
     table = _table(
         (
-            "Market / score", "Model", "Ask", "Fair", "Max buy", "Net edge", "Allocated", "Contracts",
+            "Market / score", "Model", "Ask", "Fair", "Max buy", "Net edge", "% of X", "Allocated", "Contracts",
             "Max loss", "Gross", "Net win", "Settles on", "Reason", "Intent",
         ),
         table_rows,
@@ -143,7 +165,7 @@ def _allocations(strategy: BettingStrategy) -> str:
     table_details = _details("Show full pricing table (every quote, every column)", table)
     return (
         "<h2>Betting value &amp; bankroll allocation</h2>"
-        f'<div class="card">{_settlement_banner(strategy)}{intro}{chart}{table_details}</div>'
+        f'<div class="card">{_settlement_banner(strategy)}{split}{chart}{table_details}</div>'
     )
 
 
@@ -179,28 +201,39 @@ def _stage_bar(stage: ExitStage, total_contracts: Decimal) -> str:
 def _live(strategy: BettingStrategy) -> str:
     if not strategy.live_scores:
         return ""
+    bankroll = strategy.request.bankroll
+    # Card badge = each score's share of the TOTAL staked across every correct-score
+    # card, so the badges across all cards sum to 100%. (Cost as a % of X is shown as
+    # secondary context.) Cards with no position contribute 0% and still sum cleanly.
+    ladder_total = sum((item.position_cost for item in strategy.live_scores), Decimal(0)) or Decimal(1)
     cards: list[str] = []
     for item in strategy.live_scores:
         total = sum((stage.contracts for stage in item.stages), Decimal(0))
         steps = "".join(_stage_bar(stage, total) for stage in item.stages)
         active_cls = "" if item.position_active else " inactive"
-        badge = (
-            '<span class="ladder-badge active">position open</span>'
-            if item.position_active
-            else '<span class="ladder-badge">no position</span>'
-        )
+        if item.position_active:
+            held = f"{item.allocated_contracts:f}".rstrip("0").rstrip(".") or "0"
+            badge = f'<span class="ladder-badge active">{_pct_of(item.position_cost, ladder_total)} of stake</span>'
+            head_note = (
+                f'<p class="ladder-cost">{_pct_of(item.position_cost, bankroll)} of X · '
+                f'{_money(item.position_cost)} · {held} contracts held</p>'
+            )
+        else:
+            badge = '<span class="ladder-badge">no position · 0%</span>'
+            head_note = ""
         cards.append(
             f'<div class="ladder-card{active_cls}"><div class="ladder-head">'
             f'<span class="ladder-score">{escape(item.score)}</span>{badge}</div>'
+            f"{head_note}"
             f'<div class="ladder-steps">{steps}</div>'
             f'<p class="ladder-foot">next goal → {escape(item.next_home_score)} or {escape(item.next_away_score)}'
             f" &nbsp;·&nbsp; if it lands before a fill: {escape(item.goal_before_fill)}</p></div>"
         )
     legend = (
         f'<p class="ladder-foot">Assumptions: {escape(strategy.live_scores[0].assumptions)} '
-        "Each row is one planned exit window; the bar and the big number are the share of the position "
-        "sold in that window (contracts and cash-if-filled below), and a highlighted row is executable "
-        "against the current bid right now.</p>"
+        "The badge on each card is that score's share of the total correct-score stake, so the badges add up "
+        "to 100%. Within a card, each row is one exit window and its bar/number is the share of that position "
+        "sold in the window; a highlighted row is executable against the current bid right now.</p>"
     )
     return (
         '<h2>Live correct-score exit ladder</h2>'
@@ -235,28 +268,31 @@ def _node_fill(profit: Decimal, reference: Decimal) -> str:
     return f"background:color-mix(in srgb,{hue} {pct:.0f}%,var(--card));"
 
 
-def _tree_node(row: PathLedgerRow, reference: Decimal) -> str:
+def _tree_node(row: PathLedgerRow, reference: Decimal, bankroll: Decimal) -> str:
     marks = "".join(
-        f'<span class="{"hit" if hit else ""}" title="+{label}"></span>'
-        for hit, label in (
-            (row.fixed_profit_025, "$0.25"),
-            (row.fixed_profit_050, "$0.50"),
-            (row.fixed_profit_100, "$1.00"),
+        f'<span class="{"hit" if hit else ""}" title="+{label} ({_pct_of(amount, bankroll)} of X)"></span>'
+        for hit, label, amount in (
+            (row.fixed_profit_025, "$0.25", Decimal("0.25")),
+            (row.fixed_profit_050, "$0.50", Decimal("0.50")),
+            (row.fixed_profit_100, "$1.00", Decimal("1.00")),
         )
     )
     recovered = "full bankroll recovered" if row.full_bankroll_recovered else (
         "position recovered" if row.active_positions_recovered else ""
     )
+    signed_pct = _pct_of(row.realized_profit, bankroll)
+    if row.realized_profit > 0 and signed_pct != "—":
+        signed_pct = "+" + signed_pct
     title = (
-        f"stage cash {_money0(row.stage_cash)}, cumulative {_money0(row.cumulative_cash)}, "
-        f"active costs {_money0(row.active_position_costs)}"
+        f"net P/L {_money0(row.realized_profit)} ({signed_pct} of X); "
+        f"cumulative cash {_money0(row.cumulative_cash)}, active costs {_money0(row.active_position_costs)}"
         + (f" — {recovered}" if recovered else "")
     )
     return (
         f'<div class="ptree-node {_pl_class(row.realized_profit)}" '
         f'style="{_node_fill(row.realized_profit, reference)}" title="{escape(title, quote=True)}">'
         f'<div class="sc">{escape(row.score)}</div>'
-        f'<div class="pl">{_money0(row.realized_profit)}</div>'
+        f'<div class="pl">{signed_pct}</div>'
         f'<div class="marks">{marks}</div></div>'
     )
 
@@ -268,6 +304,7 @@ def _paths(strategy: BettingStrategy) -> str:
     for row in strategy.path_ledger:
         branches.setdefault(row.path, []).append(row)
 
+    bankroll = strategy.request.bankroll
     reference = max(
         (abs(row.realized_profit) for row in strategy.path_ledger), default=Decimal(1)
     ) or Decimal(1)
@@ -275,14 +312,15 @@ def _paths(strategy: BettingStrategy) -> str:
     branch_html: list[str] = []
     for path, rows in branches.items():
         steps = rows[1:] if len(rows) > 1 else rows
-        chain = '<div class="ptree-stem"></div>'.join(_tree_node(row, reference) for row in steps)
+        chain = '<div class="ptree-stem"></div>'.join(_tree_node(row, reference, bankroll) for row in steps)
         label = escape(path.split(" → ", 1)[-1] if " → " in path else path)
         branch_html.append(
             f'<div class="ptree-branch"><div class="ptree-branch-label">{label}</div>{chain}</div>'
         )
 
     root_html = (
-        f'<div class="ptree-root">{_tree_node(root_row, reference)}<div class="ptree-stem"></div></div>'
+        f'<div class="ptree-root">{_tree_node(root_row, reference, bankroll)}'
+        '<div class="ptree-stem"></div></div>'
         if root_row is not None
         else ""
     )
@@ -293,7 +331,7 @@ def _paths(strategy: BettingStrategy) -> str:
     legend = (
         '<div class="ptree-legend">'
         '<span><span class="sw" style="background:var(--profit)"></span>'
-        "net profit — deeper green = bigger swing</span>"
+        "net profit (% of X) — deeper green = bigger swing</span>"
         '<span><span class="sw" style="background:var(--loss)"></span>net loss — deeper red = bigger swing</span>'
         '<span><span class="sw" style="background:var(--accent)"></span>'
         "dot lit = that fixed-profit milestone reached</span>"
@@ -301,8 +339,8 @@ def _paths(strategy: BettingStrategy) -> str:
     )
     table_rows = [
         (
-            item.path, item.score, _money(item.stage_cash), _money(item.cumulative_cash),
-            _money(item.active_position_costs), _money(item.realized_profit),
+            item.path, item.score, _pct_of(item.realized_profit, bankroll), _money(item.realized_profit),
+            _money(item.stage_cash), _money(item.cumulative_cash), _money(item.active_position_costs),
             "yes" if item.individual_recovered else "no",
             "yes" if item.active_positions_recovered else "no",
             "yes" if item.full_bankroll_recovered else "no",
@@ -314,16 +352,16 @@ def _paths(strategy: BettingStrategy) -> str:
     ]
     table = _table(
         (
-            "Path", "Score", "Stage cash", "Cumulative", "Active costs", "P/L", "Position",
+            "Path", "Score", "P/L % of X", "P/L $", "Stage cash", "Cumulative", "Active costs", "Position",
             "Active", "Full bankroll", "+.25/+.50/+1",
         ),
         table_rows,
     )
     note = (
-        '<p class="foot">All four paths share the opening 0-0. Reading down a branch replays one plausible '
-        "sequence of goals; the number in each node is net profit/loss at that point after any staged exits "
-        "fill, and the three dots mark whether the $0.25 / $0.50 / $1.00 fixed-profit milestones have been hit."
-        "</p>"
+        f'<p class="foot">All four paths share the opening 0-0, with X = {_money(bankroll)}. Reading down a '
+        "branch replays one plausible sequence of goals; the number in each node is net profit/loss at that "
+        "point as a percent of X after any staged exits fill, and the three dots mark whether the $0.25 / $0.50 "
+        "/ $1.00 fixed-profit milestones have been hit.</p>"
     )
     return (
         "<h2>Major scoring paths &amp; capital recovery</h2>"
@@ -337,35 +375,37 @@ def _paths(strategy: BettingStrategy) -> str:
 # ---------------------------------------------------------------------------
 
 def _preset_card(preset: PresetSummary) -> str:
-    total = preset.reserve + preset.deployed if (preset.reserve + preset.deployed) > 0 else Decimal(1)
+    # X is the true bankroll = deployed + uninvested cash, so deployed% + cash%
+    # sum to 100. (reserve is a minimum-cash floor, not the actual split.) One
+    # accent hue per deployed slice; the list and tooltips name each selection.
+    total = preset.deployed + preset.uninvested_cash or Decimal(1)
     deployed_pct = float(preset.deployed / total * 100)
-    # Part-to-whole: one accent hue for every deployed slice, separated by surface
-    # gaps; the list below and the per-slice tooltip carry which selection is which,
-    # so colour is not spent re-encoding identity.
     segments: list[str] = []
     for position in preset.allocations:
         share = float(position.amount / total * 100)
         segments.append(
             f'<span style="width:{share:.1f}%;background:var(--accent)" '
-            f'title="{escape(position.evaluation.quote.selection, quote=True)}: {_money0(position.amount)}">'
+            f'title="{escape(position.evaluation.quote.selection, quote=True)}: '
+            f'{_pct_of(position.amount, total)} of X ({_money0(position.amount)})">'
             f"{escape(position.evaluation.quote.selection)}</span>"
         )
     cash_pct = max(0.0, 100.0 - deployed_pct)
-    segments.append(f'<span class="cash" style="width:{cash_pct:.1f}%">cash</span>')
+    segments.append(f'<span class="cash" style="width:{cash_pct:.1f}%">cash {cash_pct:.0f}%</span>')
     positions_html = "".join(
         f'<li><span class="nm">{escape(position.evaluation.quote.selection)}</span>'
-        f'<span class="amt">{_money0(position.amount)} / {position.contracts}c</span></li>'
+        f'<span class="amt"><b>{_pct_of(position.amount, total)}</b> '
+        f'<span class="sub3">{_money0(position.amount)} / {position.contracts}c</span></span></li>'
         for position in preset.allocations
     ) or '<li><span class="nm">none — retain cash</span></li>'
     exits = " / ".join(f"{fraction:.0%}" for fraction in preset.exit_fractions)
     return (
         f'<div class="plan-card"><h4>{escape(preset.name)}</h4>'
-        f'<p class="sub2">reserve {_money0(preset.reserve)} · exits {exits}</p>'
+        f'<p class="sub2">min. reserve {_pct_of(preset.reserve, total)} of X · exits {exits}</p>'
         f'<div class="plan-bar">{"".join(segments)}</div>'
         '<div class="plan-stats">'
-        f'<div>Deployed<b>{_money0(preset.deployed)}</b></div>'
-        f'<div>Cash<b>{_money0(preset.uninvested_cash)}</b></div>'
-        f'<div>Max loss<b>{_money0(preset.maximum_loss)}</b></div>'
+        f'<div>Deployed<b>{_pct_of(preset.deployed, total)}</b></div>'
+        f'<div>Cash<b>{_pct_of(preset.uninvested_cash, total)}</b></div>'
+        f'<div>Max loss<b>{_pct_of(preset.maximum_loss, total)}</b></div>'
         f'<div>Positions<b>{len(preset.allocations)}</b></div>'
         "</div>"
         f'<ul class="plan-positions">{positions_html}</ul></div>'
@@ -378,16 +418,20 @@ def _presets(strategy: BettingStrategy) -> str:
     cards = "".join(_preset_card(preset) for preset in strategy.presets)
     table_rows: list[tuple[str, ...]] = []
     for item in strategy.presets:
+        whole = item.deployed + item.uninvested_cash or Decimal(1)
         allocations = "; ".join(
-            f"{position.evaluation.quote.selection}: {_money(position.amount)} / {position.contracts}"
+            f"{position.evaluation.quote.selection}: {_pct_of(position.amount, whole)} "
+            f"({_money(position.amount)} / {position.contracts})"
             for position in item.allocations
         ) or "none — retain cash"
         table_rows.append(
-            (item.name, _money(item.reserve), _money(item.deployed), _money(item.uninvested_cash),
-             _money(item.maximum_loss), "/".join(f"{value:.0%}" for value in item.exit_fractions), allocations)
+            (item.name, _pct_of(item.deployed, whole), _pct_of(item.uninvested_cash, whole),
+             _pct_of(item.maximum_loss, whole), _money(item.reserve), _money(item.deployed),
+             _money(item.uninvested_cash), "/".join(f"{value:.0%}" for value in item.exit_fractions), allocations)
         )
     table = _table(
-        ("Plan", "Reserve", "Deployed", "Cash", "Max loss", "Exit percentages", "Allocations"),
+        ("Plan", "Deployed %X", "Cash %X", "Max loss %X", "Reserve $", "Deployed $", "Cash $",
+         "Exit percentages", "Allocations"),
         table_rows,
     )
     return (

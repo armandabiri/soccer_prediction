@@ -166,6 +166,15 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .edge-track .fill { position:absolute; top:1px; bottom:1px; border-radius:5px; }
 .edge-value { text-align:right; font-size:.78rem; color:var(--muted); font-variant-numeric:tabular-nums; }
 .edge-value b { display:block; color:var(--ink); font-size:.85rem; }
+.edge-value .pctv { display:block; color:var(--ink); font-weight:700; font-size:.82rem; }
+.edge-value .sub3 { display:block; color:var(--muted); font-size:.68rem; }
+.split-bar { display:flex; gap:2px; height:20px; border-radius:7px; overflow:hidden; background:var(--bar);
+  margin:2px 0 4px; }
+.split-bar span { display:flex; align-items:center; justify-content:center; font-size:.66rem; font-weight:600;
+  font-variant-numeric:tabular-nums; overflow:hidden; white-space:nowrap; }
+.split-bar .dep { background:var(--accent); color:#fff; }
+.split-bar .csh { background:var(--bar); color:var(--muted); }
+.ladder-cost { margin:-4px 0 8px; font-size:.7rem; color:var(--muted); font-variant-numeric:tabular-nums; }
 .details-toggle { margin:10px 0 2px; }
 .details-toggle summary { cursor:pointer; color:var(--muted); font-size:.8rem; padding:4px 0; }
 .details-toggle summary:hover { color:var(--ink); }

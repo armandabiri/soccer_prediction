@@ -29,6 +29,19 @@ def _pct_of(value: Decimal, whole: Decimal) -> str:
     return f"{value / whole * 100:.1f}%"
 
 
+def _contracts(value: Decimal) -> str:
+    """A contract count with no trailing zeros — but never mangling whole numbers.
+
+    Contracts are whole units here; format as an integer. (A naive
+    ``f"{v:f}".rstrip("0")`` turns 10 into 1 by stripping the trailing zero.)
+    """
+    normalized = value.normalize()
+    text = f"{normalized:f}"
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text or "0"
+
+
 def _table(headers: tuple[str, ...], rows: Sequence[tuple[str, ...]]) -> str:
     head = "".join(f"<th>{escape(value)}</th>" for value in headers)
     body = "".join(
@@ -184,7 +197,7 @@ def _stage_bar(stage: ExitStage, total_contracts: Decimal) -> str:
     share = float(stage.contracts / total_contracts * 100) if total_contracts else 0.0
     now_cls = " now" if executable else ""
     now_text = "fillable now" if executable else "not yet fillable"
-    contracts = f"{stage.contracts:f}".rstrip("0").rstrip(".") or "0"
+    contracts = _contracts(stage.contracts)
     return (
         f'<div class="ladder-step{now_cls}">'
         f'<span class="lbl">{escape(stage.minute_range)}</span>'
@@ -212,7 +225,7 @@ def _live(strategy: BettingStrategy) -> str:
         steps = "".join(_stage_bar(stage, total) for stage in item.stages)
         active_cls = "" if item.position_active else " inactive"
         if item.position_active:
-            held = f"{item.allocated_contracts:f}".rstrip("0").rstrip(".") or "0"
+            held = _contracts(item.allocated_contracts)
             badge = f'<span class="ladder-badge active">{_pct_of(item.position_cost, ladder_total)} of stake</span>'
             head_note = (
                 f'<p class="ladder-cost">{_pct_of(item.position_cost, bankroll)} of X · '

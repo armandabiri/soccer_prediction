@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import webbrowser
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from importlib import resources
 from pathlib import Path
 from typing import Literal
@@ -249,7 +249,7 @@ def write_reports(
     spec = _spec(key)
     forecast = build_forecast(model, key=key, live=live)
     strategy = build_strategy(forecast, quote_path=quote_path) if include_strategy else None
-    generated_at = datetime.now(UTC)
+    generated_at = datetime.now().astimezone()  # local wall-clock time (with tz offset)
     stamp = generated_at.strftime("%Y-%m-%d_%H-%M-%S")
     out = Path("reports") if output_dir is None else Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)

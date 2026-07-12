@@ -12,7 +12,7 @@ include corners or cards, so those fall back to model priors (use
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 
 from soccer_prediction.models import MatchForecast
@@ -36,7 +36,7 @@ def write_wc2026_report(
 ) -> dict[str, Path]:
     """Write HTML and Markdown reports for a real World Cup 2026 fixture."""
     forecast = forecast_wc2026(home, away)
-    generated_at = datetime.now(UTC)
+    generated_at = datetime.now().astimezone()  # local wall-clock time (with tz offset)
     stamp = generated_at.strftime("%Y-%m-%d_%H-%M-%S")
     out = Path("reports") if output_dir is None else Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)

@@ -50,6 +50,8 @@ def test_switzerland_colombia_reports_written(tmp_path: Path) -> None:
     assert 'class="ladder-card"' in html  # per-score exit ladder cards
     assert 'class="ptree"' in html  # vertical scoring-path tree
     assert 'class="ptree-branches"' in html
+    assert 'class="wf-grid"' in html  # step-by-step sell-down waterfall (open positions only)
+    assert "Position sell-down, step by step" in html
     assert 'class="plan-card"' in html  # side-by-side risk-plan cards
     # Betting markets settle on the regulation-time result, stated explicitly.
     assert "regulation-time (90') result" in html

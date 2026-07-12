@@ -6,7 +6,14 @@ from collections.abc import Sequence
 from decimal import Decimal
 from html import escape
 
-from soccer_prediction.models import Allocation, BettingStrategy, ExitStage, PathLedgerRow, PresetSummary
+from soccer_prediction.models import (
+    Allocation,
+    BettingStrategy,
+    ExitStage,
+    LiveScorePlan,
+    PathLedgerRow,
+    PresetSummary,
+)
 
 __all__ = ["strategy_section"]
 
@@ -251,6 +258,82 @@ def _live(strategy: BettingStrategy) -> str:
     return (
         '<h2>Live correct-score exit ladder</h2>'
         f'<div class="card"><div class="ladder-grid">{"".join(cards)}</div>{legend}</div>'
+        + _selldown(strategy)
+    )
+
+
+# ---------------------------------------------------------------------------
+# 2b. Sell-down progress — one cash bar per open position, open positions only
+# ---------------------------------------------------------------------------
+
+def _selldown_card(item: LiveScorePlan) -> str:
+    """One position as a single cash-progress bar that fills across the windows.
+
+    The whole track = the total cash banked once the position is cleared. Each
+    window is a labelled segment that adds to the fill; a break-even line sits at
+    the entry cost, so the bar visibly crosses from "recovering stake" into pure
+    profit.
+    """
+    held = item.allocated_contracts
+    cost = item.position_cost
+    total_cash = sum((stage.cash_received for stage in item.stages), Decimal(0)) or Decimal("0.01")
+    breakeven_pct = float(min(Decimal(1), cost / total_cash) * 100)
+
+    segments: list[str] = []
+    running = Decimal(0)
+    for stage in item.stages:
+        seg_pct = float(stage.cash_received / total_cash * 100)
+        running += stage.cash_received
+        # a segment is "profit" once the cash banked through it clears the cost
+        seg_cls = "profit" if running > cost else "stake"
+        label = f"{stage.minute_range}" if seg_pct >= 12 else ""
+        segments.append(
+            f'<span class="wf-seg {seg_cls}" style="width:{seg_pct:.1f}%" '
+            f'title="{escape(stage.minute_range)}: sell {_contracts(stage.contracts)}c → '
+            f'+{_money(stage.cash_received)} (banked {_money(running)})">'
+            f'<span class="wf-seglab">{escape(label)}</span></span>'
+        )
+
+    profit = total_cash - cost
+    profit_cls = "profit" if profit > 0 else ("loss" if profit < 0 else "")
+    steps_text = " → ".join(
+        f"{escape(stage.minute_range)} {_contracts(stage.contracts)}c" for stage in item.stages
+    )
+    return (
+        f'<div class="wf-card"><div class="wf-head">'
+        f'<span class="wf-score">{escape(item.score)}</span>'
+        f'<span class="wf-sub">{_contracts(held)} contracts · {_money(cost)} in</span></div>'
+        f'<div class="wf-bar">{"".join(segments)}'
+        f'<span class="wf-breakeven" style="left:{breakeven_pct:.1f}%" '
+        f'title="break-even — stake {_money(cost)} recovered"></span></div>'
+        f'<div class="wf-scale"><span>$0</span><span>sell: {steps_text}</span>'
+        f'<span>{_money(total_cash)}</span></div>'
+        f'<div class="wf-result {profit_cls}">'
+        f'cash out {_money(total_cash)} − cost {_money(cost)} = '
+        f'<strong>{_money(profit)}</strong> profit if all stages fill</div>'
+        "</div>"
+    )
+
+
+def _selldown(strategy: BettingStrategy) -> str:
+    active = [item for item in strategy.live_scores if item.position_active]
+    if not active:
+        return ""
+    cards = "".join(_selldown_card(item) for item in active)
+    legend = (
+        '<div class="ptree-legend">'
+        '<span><span class="sw" style="background:color-mix(in srgb,var(--profit) 35%,var(--card))"></span>'
+        "recovering your stake</span>"
+        '<span><span class="sw" style="background:var(--profit)"></span>pure profit (past break-even)</span>'
+        '<span><span class="sw wf-belegend"></span>break-even line = entry cost</span>'
+        "</div>"
+        '<p class="foot">One bar per open position. It fills left-to-right as you sell out over the three '
+        "windows (each segment is one window); the vertical line is your entry cost, so everything to its "
+        "right is profit. The bar's full width is the total cash you collect if every stage fills.</p>"
+    )
+    return (
+        '<h2>Position sell-down, step by step</h2>'
+        f'<div class="card"><div class="wf-grid">{cards}</div>{legend}</div>'
     )
 
 

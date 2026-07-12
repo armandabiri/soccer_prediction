@@ -198,6 +198,29 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .ladder-step .amt .sub3 { display:block; color:var(--muted); font-size:.64rem; font-weight:400; }
 .ladder-step.now .amt .pctv { color:var(--profit); }
 .ladder-foot { margin:8px 0 0; font-size:.7rem; color:var(--muted); }
+.wf-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; padding:8px 0 2px; }
+.wf-card { border:1px solid var(--line); border-radius:12px; padding:12px 14px 13px; background:var(--card); }
+.wf-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px; }
+.wf-score { font-weight:700; font-size:1.15rem; font-variant-numeric:tabular-nums; }
+.wf-sub { color:var(--muted); font-size:.74rem; }
+.wf-bar { position:relative; display:flex; gap:2px; height:30px; border-radius:8px; background:var(--bar);
+  overflow:hidden; }
+.wf-seg { position:relative; display:flex; align-items:center; justify-content:center; min-width:2px;
+  overflow:hidden; }
+.wf-seg.stake { background:color-mix(in srgb,var(--profit) 35%,var(--card)); }
+.wf-seg.profit { background:var(--profit); }
+.wf-seglab { font-size:.66rem; font-weight:600; color:var(--ink); white-space:nowrap; opacity:.85; }
+.wf-seg.profit .wf-seglab { color:#fff; }
+.wf-breakeven { position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--ink); z-index:3; }
+.wf-scale { display:flex; justify-content:space-between; gap:8px; margin-top:9px; color:var(--muted);
+  font-size:.66rem; font-variant-numeric:tabular-nums; }
+.wf-scale span:nth-child(2) { text-align:center; }
+.wf-result { margin-top:10px; padding-top:9px; border-top:1px solid var(--line); font-size:.78rem;
+  color:var(--muted); }
+.wf-result strong { font-size:.95rem; }
+.wf-result.profit strong { color:var(--profit); }
+.wf-result.loss strong { color:var(--loss); }
+.wf-belegend { background:var(--ink) !important; border-radius:1px !important; width:3px !important; }
 .ptree { display:flex; flex-direction:column; align-items:center; gap:0; padding:14px 0 4px; overflow-x:auto; }
 .ptree-root { display:inline-flex; flex-direction:column; align-items:center; }
 .ptree-node { min-width:108px; border:1px solid var(--line); border-radius:10px; padding:7px 10px;

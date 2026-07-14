@@ -58,7 +58,7 @@ include-package-data = true
 include = ["soccer_prediction*"]
 
 [tool.setuptools.package-data]
-soccer_prediction = ["py.typed", "config/defaults.yaml", "example/data/*.json"]
+soccer_prediction = ["py.typed", "config/defaults.yaml", "example/data/*.json", "example/data/*.yaml"]
 
 [tool.ruff]
 line-length = 120

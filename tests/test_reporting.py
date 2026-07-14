@@ -82,3 +82,10 @@ def test_html_exposes_all_model_decision_visuals() -> None:
     assert 'class="sidenav"' in html
     assert 'class="sidenav-link"' in html
     assert 'id="match-result-1x2"' in html or 'id="match-result' in html
+    assert "Most confident markets" in html
+    shares = [
+        float(value)
+        for value in re.findall(r'\$\d+\.\d+</td><td class="n">(\d+\.\d+)%</td>', html)
+    ]
+    assert shares
+    assert shares == sorted(shares, reverse=True)

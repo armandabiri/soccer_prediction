@@ -1,0 +1,74 @@
+schema_version: 1
+venue: screenshot_manual_entry
+observed_at: "2026-07-14T11:34:00-05:00"
+fixture:
+  team1: France
+  team2: Spain
+
+# "ask" is the displayed Yes price/probability as a decimal. A 0.59 contract
+# pays 1.00 if it wins: 0.41 profit per contract, or 69.5% ROI before fees.
+markets:
+  - {category: Advance, market: to_advance, selection: team1, ask: 0.59}
+  - {category: Advance, market: to_advance, selection: team2, ask: 0.44}
+
+  - {category: Goals, market: btts, selection: yes, ask: 0.63}
+  - {category: Goals, market: second_half_btts, selection: yes, ask: 0.33}
+  - {category: First team to score, market: first_team_to_score, selection: team1, ask: 0.55}
+  - {category: First team to score, market: first_team_to_score, selection: team2, ask: 0.42}
+  - {category: First team to score, market: first_team_to_score, selection: no_goal, ask: 0.05}
+
+  - {category: Correct score, market: correct_score, selection: "team1 2-1", ask: 0.11}
+  - {category: Correct score, market: correct_score, selection: "team1 3-2", ask: 0.04}
+  - {category: Correct score, market: correct_score, selection: "team2 2-1", ask: 0.09}
+  - {category: Correct score, market: correct_score, selection: "team1 3-1", ask: 0.06}
+  - {category: Correct score, market: correct_score, selection: "team1 2-2", ask: 0.07}
+  - {category: Correct score, market: correct_score, selection: "team1 1-1", ask: 0.16}
+  - {category: Correct score, market: correct_score, selection: "team2 3-2", ask: 0.03}
+  - {category: Correct score, market: correct_score, selection: "team1 2-0", ask: 0.07}
+  - {category: Correct score, market: correct_score, selection: "team1 4-3", ask: 0.01}
+
+  - {category: Corners, market: total_corners, selection: "8+", ask: 0.78}
+  - {category: Corners, market: total_corners, selection: "9+", ask: 0.66}
+  - {category: Corners, market: total_corners, selection: "10+", ask: 0.53}
+  - {category: Corners, market: total_corners, selection: "11+", ask: 0.40}
+  - {category: Corners, market: total_corners, selection: "12+", ask: 0.32}
+  - {category: Team corners, market: team_corners, selection: "team2:5+", ask: 0.54}
+  - {category: Team corners, market: team_corners, selection: "team2:7+", ask: 0.25}
+  - {category: Team corners, market: team_corners, selection: "team2:9+", ask: 0.10}
+  - {category: Team corners, market: team_corners, selection: "team1:5+", ask: 0.55}
+  - {category: Team corners, market: team_corners, selection: "team1:7+", ask: 0.28}
+
+  - {category: Goalscorer, market: player_goals, selection: "Kylian Mbappe:1+", ask: 0.47}
+  - {category: Goalscorer, market: player_goals, selection: "Kylian Mbappe:2+", ask: 0.13}
+  - {category: Goalscorer, market: player_goals, selection: "Kylian Mbappe:3+", ask: 0.03}
+  - {category: Goalscorer, market: player_goals, selection: "Ousmane Dembele:1+", ask: 0.27}
+  - {category: Goalscorer, market: player_goals, selection: "Ousmane Dembele:2+", ask: 0.04}
+  - {category: Goalscorer, market: player_goals, selection: "Lamine Yamal:1+", ask: 0.26}
+  - {category: Goalscorer, market: player_goals, selection: "Lamine Yamal:2+", ask: 0.04}
+  - {category: Goalscorer, market: player_goals, selection: "Michael Olise:1+", ask: 0.19}
+  - {category: Goalscorer, market: player_goals, selection: "Michael Olise:2+", ask: 0.03}
+  - {category: Goalscorer, market: player_goals, selection: "Mikel Oyarzabal:1+", ask: 0.29}
+  - {category: Goalscorer, market: player_goals, selection: "Mikel Oyarzabal:2+", ask: 0.05}
+  - {category: Goalscorer, market: player_goals, selection: "Mikel Oyarzabal:3+", ask: 0.01}
+
+  - {category: First goalscorer, market: player_first_goal, selection: "Kylian Mbappe:yes", ask: 0.21}
+  - {category: First goalscorer, market: player_first_goal, selection: "Ousmane Dembele:yes", ask: 0.11}
+  - {category: First goalscorer, market: player_first_goal, selection: no_goal, ask: 0.06}
+  - {category: First goalscorer, market: player_first_goal, selection: "Lamine Yamal:yes", ask: 0.11}
+  - {category: First goalscorer, market: player_first_goal, selection: "Michael Olise:yes", ask: 0.07}
+
+  - {category: Score or assist, market: player_score_or_assist, selection: "Kylian Mbappe:yes", ask: 0.60}
+  - {category: Score or assist, market: player_score_or_assist, selection: "Ousmane Dembele:yes", ask: 0.41}
+  - {category: Score or assist, market: player_score_or_assist, selection: "Michael Olise:yes", ask: 0.42}
+  - {category: Score or assist, market: player_score_or_assist, selection: "Lamine Yamal:yes", ask: 0.44}
+  - {category: Score or assist, market: player_score_or_assist, selection: "Marc Cucurella:yes", ask: 0.12}
+
+  - {category: Assists, market: player_assists, selection: "Michael Olise:1+", ask: 0.29}
+  - {category: Assists, market: player_assists, selection: "Michael Olise:2+", ask: 0.06}
+  - {category: Assists, market: player_assists, selection: "Ousmane Dembele:1+", ask: 0.20}
+  - {category: Assists, market: player_assists, selection: "Ousmane Dembele:2+", ask: 0.03}
+  - {category: Assists, market: player_assists, selection: "Lamine Yamal:1+", ask: 0.22}
+  - {category: Assists, market: player_assists, selection: "Lamine Yamal:2+", ask: 0.04}
+  - {category: Assists, market: player_assists, selection: "Kylian Mbappe:1+", ask: 0.20}
+  - {category: Assists, market: player_assists, selection: "Kylian Mbappe:2+", ask: 0.03}
+  - {category: Assists, market: player_assists, selection: "Marc Cucurella:1+", ask: 0.09}

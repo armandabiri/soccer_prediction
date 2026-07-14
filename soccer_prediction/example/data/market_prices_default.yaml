@@ -1,0 +1,58 @@
+schema_version: 1
+
+# ---------------------------------------------------------------------------
+# Default settings for the "$100 price-aware bankroll" report table.
+#
+# Every market_prices_<home>_<away>.yaml inherits this "optimizer" block. A
+# fixture file may override any single value by adding its own "optimizer:"
+# block; unspecified keys still fall back to the defaults below.
+#
+# Each market's "ask" is the decimal price of a binary contract that pays $1
+# when the selection wins (0.59 = 59c). Profit on a win is (1 - ask); the
+# edge the optimizer trades on is (model_probability - ask).
+# ---------------------------------------------------------------------------
+optimizer:
+  # Total notional bankroll the plan spreads across selections, in dollars.
+  bankroll: 100.00
+
+  # Objective weights. Only their RATIO matters: they are normalized to sum to
+  # 1 internally. Each funded bet is scored as a convex blend of two signals,
+  # each rescaled to [0, 1] against the best candidate:
+  #   * profit  = fractional Kelly = edge / (1 - ask)  (growth-optimal sizing)
+  #   * safety  = model win probability
+  # Raise profit_weight to chase expected value (bigger edges / cheaper prices,
+  # even at lower win rates); raise risk_weight to favour safer, higher
+  # win-probability picks. e.g. 0.80 / 0.20 = 80% return focus, 20% safety.
+  profit_weight: 0.80
+  risk_weight: 0.20
+
+  # Fraction of bankroll always kept as uninvested cash (0.05 = $5 held back).
+  reserve_pct: 0.05
+
+  # Hard cap on any single position, as a fraction of bankroll (0.28 = $28 max).
+  # Prevents the plan from piling the whole roll onto one selection.
+  max_position_pct: 0.28
+
+  # Maximum number of distinct positions the plan will fund (keeps capital
+  # concentrated on the best offers instead of diluting it across many).
+  max_positions: 6
+
+  # A contract is only funded when (model_probability - ask) exceeds this edge.
+  minimum_edge: 0.01
+
+  # Selections below this model win probability are never funded, regardless of
+  # price, so deep longshots stay out of the plan (0.20 = 20%).
+  minimum_probability: 0.20
+
+  # Proportional trading fee added on top of every ask (0.02 = 2%). 0 disables.
+  fee_rate: 0.00
+
+# ---------------------------------------------------------------------------
+# Fixture files map the generic team1/team2 tokens to real names so either
+# team may be listed as home. The default file itself carries no markets.
+# ---------------------------------------------------------------------------
+fixture:
+  team1: Team 1
+  team2: Team 2
+
+markets: []

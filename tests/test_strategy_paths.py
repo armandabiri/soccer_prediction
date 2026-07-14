@@ -16,3 +16,14 @@ def test_unfilled_or_inactive_scores_do_not_create_cash(betting_strategy: Bettin
     inactive = {plan.score for plan in betting_strategy.live_scores if not plan.position_active}
     assert all(row.stage_cash == 0 for row in betting_strategy.path_ledger if row.score in inactive)
 
+
+def test_path_ledger_exposes_full_prematch_score_portfolio(betting_strategy: BettingStrategy) -> None:
+    """All exact-score stakes are at risk from kickoff, not activated when reached."""
+    score_pool = sum(
+        item.amount
+        for item in betting_strategy.allocations
+        if item.evaluation.quote.market == "correct_score"
+    )
+    assert score_pool > 0
+    assert all(row.active_position_costs == score_pool for row in betting_strategy.path_ledger)
+

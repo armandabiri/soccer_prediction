@@ -2,24 +2,31 @@
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
-from html import escape
+from html import escape, unescape
 
 from soccer_prediction.models import BettingStrategy, MatchForecast, ScorelineGrid
 from soccer_prediction.reporting.html_analysis import confidence_interval_section, scenario_section
 from soccer_prediction.reporting.html_components import (
     _CSS,
+    _NAV_SCRIPT,
     _dot,
     _history_section,
     _pct,
     _scorers_section,
     _team_legend,
 )
+from soccer_prediction.reporting.html_confident_bets import confident_bets_section
 from soccer_prediction.reporting.html_context import context_section
 from soccer_prediction.reporting.html_model_comparison import ensemble_heatmap_section, model_comparison_section
 from soccer_prediction.reporting.html_strategy import strategy_section
 
 __all__ = ["render_html", "example_usage", "main"]
+
+_H2_RE = re.compile(r"<h2(\s[^>]*)?>(.*?)</h2>", re.IGNORECASE | re.DOTALL)
+_TAG_RE = re.compile(r"<[^>]+>")
+
 
 def render_html(
     forecast: MatchForecast,
@@ -45,6 +52,7 @@ def render_html(
         _knockout_section(forecast, home, away),
         _goals_section(forecast),
         _score_section(forecast.correct_score),
+        confident_bets_section(forecast),
         strategy_section(strategy),
         _half_section(forecast, home, away),
         _corners_section(forecast, home, away),
@@ -53,11 +61,14 @@ def render_html(
         _history_section(forecast),
     ]
     notes = "; ".join(escape(note) for note in forecast.generated_notes) or "model priors"
-    body = "\n".join(sections)
+    body = "\n".join(section for section in sections if section)
+    nav, body = _with_section_nav(body)
     return (
         f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
         f'<meta name="viewport" content="width=device-width, initial-scale=1">'
-        f'<title>{heading}</title><style>{_CSS}</style></head><body><div class="wrap">'
+        f'<title>{heading}</title><style>{_CSS}</style></head><body>'
+        f"{nav}"
+        f'<div class="wrap" id="top">'
         f"<h1>{heading}</h1>"
         f'<p class="sub">Selected model: <span class="pill">{escape(forecast.model_name)}</span> '
         f"&nbsp; Generated: {stamp} &nbsp; Data: {notes}</p>"
@@ -66,8 +77,51 @@ def render_html(
         f'<p class="foot">Generated {stamp}. Probabilities are model estimates from the historical '
         f"team stats listed above; per-half and minimum-corner figures are illustrative outputs, "
         f"not guaranteed outcomes.</p>"
-        f"</div></body></html>"
+        f"</div>{_NAV_SCRIPT}</body></html>"
     )
+
+
+def _with_section_nav(body: str) -> tuple[str, str]:
+    """Stamp section ids onto every H2 and build a left-side jump list."""
+    entries: list[tuple[str, str]] = []
+    used: set[str] = set()
+
+    def _replace(match: re.Match[str]) -> str:
+        attrs = match.group(1) or ""
+        inner = match.group(2)
+        label = unescape(_TAG_RE.sub("", inner)).strip()
+        if not label:
+            return match.group(0)
+        slug = _slugify(label)
+        base = slug
+        index = 2
+        while slug in used:
+            slug = f"{base}-{index}"
+            index += 1
+        used.add(slug)
+        entries.append((slug, label))
+        if re.search(r'\bid\s*=', attrs, re.IGNORECASE):
+            return match.group(0)
+        return f'<h2 id="{slug}"{attrs}>{inner}</h2>'
+
+    stamped = _H2_RE.sub(_replace, body)
+    if not entries:
+        return "", stamped
+    links = "".join(
+        f'<a class="sidenav-link" href="#{escape(slug)}">{escape(label)}</a>' for slug, label in entries
+    )
+    nav = (
+        '<nav class="sidenav" aria-label="Report sections">'
+        '<div class="sidenav-head"><a href="#top">Top</a></div>'
+        f'<div class="sidenav-links">{links}</div></nav>'
+    )
+    return nav, stamped
+
+
+def _slugify(label: str) -> str:
+    text = label.casefold()
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    return text.strip("-") or "section"
 
 
 def _row(label: str, probability: float, color: str | None = None) -> str:

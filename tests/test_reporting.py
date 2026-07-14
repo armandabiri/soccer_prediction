@@ -33,6 +33,15 @@ def test_text_and_markdown_render() -> None:
     assert "### Ensemble conclusion, robustness & random scenarios" in markdown
     assert "All goal algorithms" in markdown
     assert "Form, head-to-head & opponent network" in markdown
+    html = render_html(forecast)
+    assert "Latest games &amp; opponent dependencies" in html
+    assert 'class="net-graph"' in html
+    assert 'class="form-timeline"' in html
+    assert 'class="fgame' in html
+    assert 'class="net-edge-label"' in html
+    assert "Atk" in html
+    assert "neff" in html
+    assert "time decay xi=" in html
 
 
 def test_timestamp_and_history_section() -> None:
@@ -70,3 +79,6 @@ def test_html_exposes_all_model_decision_visuals() -> None:
     assert 'class="heat home' in html
     assert 'class="heat away' in html
     assert 'class="heat draw' in html
+    assert 'class="sidenav"' in html
+    assert 'class="sidenav-link"' in html
+    assert 'id="match-result-1x2"' in html or 'id="match-result' in html

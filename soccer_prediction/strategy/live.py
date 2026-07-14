@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
+from decimal import ROUND_CEILING, ROUND_DOWN, ROUND_HALF_UP, Decimal
 
 from soccer_prediction.models import (
     Allocation,
@@ -31,6 +31,10 @@ def _money(value: Decimal) -> Decimal:
 
 def _floor_step(value: Decimal, step: Decimal) -> Decimal:
     return (value / step).to_integral_value(rounding=ROUND_DOWN) * step if value > 0 else Decimal(0)
+
+
+def _ceil_step(value: Decimal, step: Decimal) -> Decimal:
+    return (value / step).to_integral_value(rounding=ROUND_CEILING) * step if value > 0 else Decimal(0)
 
 
 def _expected_goals(forecast: MatchForecast) -> tuple[float, float]:
@@ -104,6 +108,7 @@ def _stages(
     context: LiveMatchContext,
     means: tuple[float, float],
     score: tuple[int, int],
+    recovery_target: Decimal,
 ) -> tuple[ExitStage, ...]:
     quote = evaluation.quote if evaluation is not None else None
     tick = quote.tick_size if quote else CENT
@@ -113,6 +118,7 @@ def _stages(
     cost = allocation.amount if allocation else Decimal(0)
     remaining = total
     stages: list[ExitStage] = []
+    cumulative_cash = Decimal(0)
     fractions = exit_fractions(request.plan)
     values = zip(_LABELS, _MINUTES, _RANGES, fractions, strict=True)
     for index, (label, minute, minute_range, fraction) in enumerate(values):
@@ -121,6 +127,7 @@ def _stages(
         fair = _fair_at_minute(*means, score, minute, context)
         target = _target(fair, request.safety_margin, tick)
         cash = _money(quantity * target * (Decimal(1) - sell_fee))
+        cumulative_cash += cash
         allocated_cost = _money(cost * quantity / total) if total > 0 else Decimal(0)
         current_bid = quote.bid if quote else None
         bid_depth = quote.available_at_bid if quote else Decimal(0)
@@ -129,9 +136,72 @@ def _stages(
             ExitStage(
                 label, minute_range, minute, fair, current_bid, bid_depth, target, executable_now,
                 fraction, quantity, cash, cash - allocated_cost,
+                cumulative_cash=_money(cumulative_cash),
+                recovery_target=recovery_target,
+                safe_to_sell=cumulative_cash >= recovery_target and recovery_target > 0,
             )
         )
     return tuple(stages)
+
+
+def _score_tuple(selection: str) -> tuple[int, int] | None:
+    try:
+        home, away = selection.replace("+", "").split("-", 1)
+        return int(home), int(away)
+    except (TypeError, ValueError):
+        return None
+
+
+def _portfolio_recovery(
+    score: tuple[int, int],
+    allocated: dict[str, Allocation],
+    safety_margin: Decimal,
+) -> tuple[Decimal, Decimal, Decimal, Decimal]:
+    """Return sunk cost now and costs invalidated by either possible next goal.
+
+    Exact-score outcomes are monotone: once the live score reaches ``h-a``, any
+    purchased final score below ``h`` or ``a`` is impossible.  A next home or
+    away goal invalidates an additional branch.  The conservative recovery
+    target covers the more expensive branch plus the requested safety margin.
+    """
+    home, away = score
+    impossible_now = Decimal(0)
+    after_home_goal = Decimal(0)
+    after_away_goal = Decimal(0)
+    for selection, position in allocated.items():
+        final_score = _score_tuple(selection)
+        if final_score is None:
+            continue
+        final_home, final_away = final_score
+        if final_home < home or final_away < away:
+            impossible_now += position.amount
+        if final_home < home + 1 or final_away < away:
+            after_home_goal += position.amount
+        if final_home < home or final_away < away + 1:
+            after_away_goal += position.amount
+    worst_branch = max(after_home_goal, after_away_goal)
+    target = _money(worst_branch * (Decimal(1) + safety_margin))
+    return (
+        _money(impossible_now),
+        _money(after_home_goal),
+        _money(after_away_goal),
+        target,
+    )
+
+
+def _safe_sell_price(
+    position: Allocation | None,
+    evaluation: ContractEvaluation | None,
+    recovery_target: Decimal,
+) -> Decimal | None:
+    if position is None or position.contracts <= 0:
+        return None
+    quote = evaluation.quote if evaluation is not None else position.evaluation.quote
+    net_multiplier = Decimal(1) - quote.sell_fee_rate
+    if net_multiplier <= 0:
+        return None
+    raw = recovery_target / (position.contracts * net_multiplier)
+    return _ceil_step(raw, quote.tick_size)
 
 
 def build_live_exit_ladder(
@@ -167,6 +237,10 @@ def build_live_exit_ladder(
         score = f"{home}-{away}"
         probability = Decimal(str(grid.cell_probability(home, away)))
         position = allocated.get(score)
+        evaluation = by_score.get(score)
+        impossible_now, next_home_loss, next_away_loss, recovery_target = _portfolio_recovery(
+            (home, away), allocated, request.safety_margin
+        )
         plans.append(
             LiveScorePlan(
                 score=score,
@@ -174,11 +248,24 @@ def build_live_exit_ladder(
                 position_active=position is not None,
                 allocated_contracts=position.contracts if position else Decimal(0),
                 position_cost=position.amount if position else Decimal(0),
-                stages=_stages(position, by_score.get(score), request, live_context, means, (home, away)),
+                stages=_stages(
+                    position,
+                    evaluation,
+                    request,
+                    live_context,
+                    means,
+                    (home, away),
+                    recovery_target,
+                ),
                 next_home_score=f"{home + 1}-{away}",
                 next_away_score=f"{home}-{away + 1}",
                 goal_before_fill="Cancel the unfilled old-score order; its unsold contracts lose most or all value.",
                 assumptions=assumptions,
+                impossible_cost_now=impossible_now,
+                next_home_goal_loss=next_home_loss,
+                next_away_goal_loss=next_away_loss,
+                safe_recovery_target=recovery_target,
+                safe_sell_price=_safe_sell_price(position, evaluation, recovery_target),
             )
         )
     return tuple(plans)

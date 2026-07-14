@@ -172,7 +172,7 @@ def build_scenario_analysis(
         ensemble_validation_to=run.validation_to.isoformat() if run.validation_to else None,
         ensemble_weight_method=run.weight_method,
         selected_model_name=selected_model_name,
-        interval_method="effective-sample sensitivity range with component spread for ensemble",
+        interval_method="wilson effective-sample interval with component-spread conformal envelope",
     )
 
 
@@ -279,12 +279,24 @@ def _confidence_interval(
     model_estimates: Sequence[float],
     data_uncertainty: float,
 ) -> tuple[float, float]:
-    """Approximate an 80% interval from effective evidence and model spread."""
+    """Approximate an 80% interval from Wilson sampling, model spread, and evidence."""
     evidence = max(0.0, -6.0 * math.log(max(data_uncertainty, 1e-9)))
-    posterior_strength = evidence + 6.0
-    sampling_margin = 1.2816 * math.sqrt(probability * (1.0 - probability) / posterior_strength)
-    model_margin = (max(model_estimates) - min(model_estimates)) / 2.0
-    margin = math.sqrt(sampling_margin**2 + model_margin**2)
-    lower = min(probability - margin, min(model_estimates))
-    upper = max(probability + margin, max(model_estimates))
+    wilson_low, wilson_high = _wilson_interval(probability, evidence + 6.0, z=1.2816)
+    model_low = min(model_estimates)
+    model_high = max(model_estimates)
+    model_margin = (model_high - model_low) / 2.0
+    # Mild conformal-style expansion: keep intervals at least as wide as half the model envelope.
+    lower = min(wilson_low, model_low, probability - model_margin)
+    upper = max(wilson_high, model_high, probability + model_margin)
     return max(0.0, lower), min(1.0, upper)
+
+
+def _wilson_interval(probability: float, strength: float, *, z: float) -> tuple[float, float]:
+    """Wilson score interval; more stable than normal approx for small evidence."""
+    n = max(strength, 1.0)
+    p = min(1.0, max(0.0, probability))
+    z2 = z * z
+    denominator = 1.0 + z2 / n
+    center = (p + z2 / (2.0 * n)) / denominator
+    spread = z * math.sqrt((p * (1.0 - p) + z2 / (4.0 * n)) / n) / denominator
+    return center - spread, center + spread

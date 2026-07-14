@@ -19,7 +19,13 @@ def test_wc2026_example_runs() -> None:
 
 def test_fixtures_registry_has_expected_matchups() -> None:
     """The constant FIXTURES registry names all competing team pairs."""
-    assert {"switzerland_colombia", "france_morocco", "argentina_egypt", "spain_belgium"} <= set(FIXTURES)
+    assert {
+        "switzerland_colombia",
+        "france_morocco",
+        "argentina_egypt",
+        "spain_belgium",
+        "spain_france",
+    } <= set(FIXTURES)
     for key, spec in FIXTURES.items():
         assert spec.key == key
         assert spec.home and spec.away
@@ -52,6 +58,10 @@ def test_switzerland_colombia_reports_written(tmp_path: Path) -> None:
     assert 'class="ptree-branches"' in html
     assert 'class="wf-grid"' in html  # step-by-step sell-down waterfall (open positions only)
     assert "Position sell-down, step by step" in html
+    assert "blue = covering next-goal invalidated positions" in html
+    assert "Most confident markets" in html
+    assert "$100" in html
+    assert "Color map used throughout" in html
     assert 'class="plan-card"' in html  # side-by-side risk-plan cards
     # Betting markets settle on the regulation-time result, stated explicitly.
     assert "regulation-time (90') result" in html
@@ -69,12 +79,15 @@ def test_switzerland_colombia_forecast_favours_stronger_side() -> None:
 
 
 def test_other_fixtures_load_independently() -> None:
-    """France/Morocco, Argentina/Egypt, Spain/Belgium load their own data, not Switzerland/Colombia's."""
+    """France/Morocco, Argentina/Egypt, Spain/Belgium, Spain/France load their own data."""
     france_morocco = load_history(key="france_morocco")
     argentina_egypt = load_history(key="argentina_egypt")
     spain_belgium = load_history(key="spain_belgium")
+    spain_france = load_history(key="spain_france")
     assert {"France", "Morocco"} <= {record.team for record in france_morocco}
     assert {"Argentina", "Egypt"} <= {record.team for record in argentina_egypt}
     assert {"Spain", "Belgium"} <= {record.team for record in spain_belgium}
+    assert {"Spain", "France"} <= {record.team for record in spain_france}
     assert {"Switzerland", "Colombia"}.isdisjoint({record.team for record in france_morocco})
     assert {"Switzerland", "Colombia"}.isdisjoint({record.team for record in spain_belgium})
+    assert {"Switzerland", "Colombia"}.isdisjoint({record.team for record in spain_france})

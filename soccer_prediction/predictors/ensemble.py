@@ -158,17 +158,30 @@ def _calibrated_weights(
     if len(train) < 12 or len(validation) < 6:
         return dict(DEFAULT_ENSEMBLE_WEIGHTS), {}, 0, None, None, "static_prior_insufficient_history"
     losses: dict[str, float] = {}
+    # Import inside the calibrator to avoid predictors <-> calibration import cycles.
+    from soccer_prediction.calibration.metrics import log_loss, ranked_probability_score
+
     for name, model in _new_models(DEFAULT_ENSEMBLE_WEIGHTS, validation=True).items():
         model.fit(train, as_of=cutoff)
-        loss = 0.0
+        total = 0.0
         for match in validation:
-            probabilities = model.predict_scoreline(match.home_team, match.away_team).home_draw_away()
-            loss -= math.log(max(probabilities[_actual_index(match)], 1e-12))
-        losses[name] = loss / len(validation)
+            grid = model.predict_scoreline(match.home_team, match.away_team)
+            probabilities = grid.home_draw_away()
+            actual = _actual_index(match)
+            # Blend proper scoring rules: log-loss (sharpness) + RPS (ordered 1X2).
+            combined = 0.55 * log_loss(probabilities, actual) + 0.45 * ranked_probability_score(
+                probabilities, actual
+            )
+            # Light scoreline log-score so grids that nail exact scores are rewarded.
+            home_bucket = min(match.home_score, grid.home_goals_max)
+            away_bucket = min(match.away_score, grid.away_goals_max)
+            combined += 0.15 * (-math.log(max(grid.probabilities[home_bucket][away_bucket], 1e-12)))
+            total += combined
+        losses[name] = total / len(validation)
     best_loss = min(losses.values())
-    skill = {name: math.exp(-3.0 * (loss - best_loss)) for name, loss in losses.items()}
+    skill = {name: math.exp(-2.5 * (loss - best_loss)) for name, loss in losses.items()}
     skill = _normalize_weights(skill)
-    strength = min(0.45, len(validation) / 30.0)
+    strength = min(0.55, len(validation) / 28.0)
     blended = {
         name: (1.0 - strength) * DEFAULT_ENSEMBLE_WEIGHTS[name] + strength * skill[name]
         for name in DEFAULT_ENSEMBLE_WEIGHTS

@@ -6,6 +6,7 @@ from html import escape
 
 from soccer_prediction.models import MatchForecast
 from soccer_prediction.reporting.html_components import _dot, _fixture_color
+from soccer_prediction.reporting.html_network import matchup_network_section
 
 __all__ = ["context_section"]
 
@@ -62,10 +63,12 @@ def context_section(forecast: MatchForecast) -> str:
         f"{escape(context.style_description)}</p>"
         f'<p class="foot">The morale value is a bounded recent-results proxy, not a direct psychological '
         f"measurement. Effective sample size strongly discounts older matches. Network paths adjust schedule "
-        f"strength but do not imply transitive wins.</p>"
+        f"strength but do not imply transitive wins. Edge weights on the graph are the same "
+        f"Σ e<sup>−ξ·age</sup> terms used when fitting attack/defence factors.</p>"
     )
     return (
         f'<h2>Form, head-to-head &amp; opponent network</h2><div class="card">'
+        f"{matchup_network_section(forecast)}"
         f'<div style="overflow-x:auto"><table>{form_header}<tbody>{form_rows}</tbody></table></div>'
         f"{evidence}</div>"
     )

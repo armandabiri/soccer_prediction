@@ -10,6 +10,7 @@ import pytest
 from soccer_prediction.models import ScorelineGrid, TeamMatchStats
 from soccer_prediction.predictors import EnsemblePredictor, MonteCarloPredictor, get_model
 from soccer_prediction.predictors.bivariate_poisson import bivariate_poisson_grid
+from soccer_prediction.predictors.dixon_coles import DixonColesPredictor
 from soccer_prediction.predictors.ensemble import pool_scoreline_grids
 from soccer_prediction.predictors.negative_binomial import negative_binomial_grid
 from soccer_prediction.predictors.poisson import poisson_grid
@@ -126,6 +127,22 @@ def test_ensemble_regularizes_weights_from_temporal_holdout() -> None:
         "monte_carlo",
     }
     assert sum(ensemble.weights.values()) == pytest.approx(1.0)
+
+
+def test_dixon_coles_estimates_interior_rho(sample_history: list[TeamMatchStats]) -> None:
+    """Likelihood-tuned rho stays inside the classical Dixon-Coles band."""
+    dixon = DixonColesPredictor()
+    dixon.fit(sample_history)
+    assert -0.15 <= dixon.rho <= 0.02
+    assert dixon.draw_boost == pytest.approx(min(0.18, max(0.0, -dixon.rho)))
+
+
+def test_monte_carlo_calibrates_mix_from_history(sample_history: list[TeamMatchStats]) -> None:
+    """With enough matches the latent-state mix adapts instead of using only defaults."""
+    model = MonteCarloPredictor(simulations=1_000, seed=3)
+    model.fit(sample_history)
+    assert 0.16 <= model._mix.volatility <= 0.38
+    assert 0.95 <= model._mix.mean_factor <= 1.12
 
 
 def test_every_advanced_registry_model_predicts(sample_history: list[TeamMatchStats]) -> None:

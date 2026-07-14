@@ -77,11 +77,26 @@ def _negative_binomial_pmf(goals: int, mean: float, dispersion: float) -> float:
 
 
 def _estimate_dispersion(history: Sequence[TeamMatchStats]) -> float:
+    """Method-of-moments dispersion with light recency weighting on recent totals."""
     if len(history) < 4:
         return 10.0
-    goals = [float(record.goals_for) for record in history]
-    mean = sum(goals) / len(goals)
-    variance = sum((value - mean) ** 2 for value in goals) / (len(goals) - 1)
+    # Prefer home-perspective rows so each match contributes once when both sides are present.
+    rows = [record for record in history if record.is_home] or list(history)
+    if len(rows) < 4:
+        rows = list(history)
+    anchor = max(record.date for record in rows)
+    weights: list[float] = []
+    goals: list[float] = []
+    for record in rows:
+        age = max((anchor - record.date).days, 0)
+        weight = math.exp(-0.0039 * age)
+        weights.append(weight)
+        goals.append(float(record.goals_for + record.goals_against) / 2.0)
+    total_weight = sum(weights)
+    mean = sum(weight * value for weight, value in zip(weights, goals, strict=True)) / total_weight
+    variance = sum(weight * (value - mean) ** 2 for weight, value in zip(weights, goals, strict=True)) / max(
+        total_weight - max(weights), 1e-9
+    )
     if variance <= mean + 0.05:
         return 15.0
     estimate = mean * mean / max(variance - mean, 1e-9)

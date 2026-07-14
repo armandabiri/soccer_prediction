@@ -28,18 +28,14 @@ def simulate_score_paths(
         for item in allocations
         if item.evaluation.quote.market == "correct_score"
     }
+    score_portfolio_cost = sum((item.amount for item in positions.values()), Decimal(0))
     rows: list[PathLedgerRow] = []
     for path_values in _PATHS:
         path = " → ".join(path_values)
         cumulative = Decimal(0)
-        active_costs = Decimal(0)
-        activated: set[str] = set()
         for index, score in enumerate(path_values):
             plan = plans.get(score)
             position = positions.get(score)
-            if position is not None and score not in activated:
-                active_costs += position.amount
-                activated.add(score)
             if plan is None or position is None:
                 stage_cash = Decimal(0)
             elif index == len(path_values) - 1:
@@ -47,7 +43,7 @@ def simulate_score_paths(
             else:
                 stage_cash = plan.stages[0].cash_received
             cumulative += stage_cash
-            profit = cumulative - active_costs
+            profit = cumulative - score_portfolio_cost
             individual_cost = position.amount if position else Decimal(0)
             rows.append(
                 PathLedgerRow(
@@ -55,10 +51,10 @@ def simulate_score_paths(
                     score=score,
                     stage_cash=stage_cash,
                     cumulative_cash=cumulative,
-                    active_position_costs=active_costs,
+                    active_position_costs=score_portfolio_cost,
                     realized_profit=profit,
                     individual_recovered=position is not None and stage_cash >= individual_cost,
-                    active_positions_recovered=active_costs > 0 and cumulative >= active_costs,
+                    active_positions_recovered=score_portfolio_cost > 0 and cumulative >= score_portfolio_cost,
                     full_bankroll_recovered=cumulative >= bankroll,
                     fixed_profit_025=profit >= Decimal("0.25"),
                     fixed_profit_050=profit >= Decimal("0.50"),

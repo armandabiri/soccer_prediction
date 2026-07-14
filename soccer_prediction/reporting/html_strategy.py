@@ -114,7 +114,7 @@ def _allocations(strategy: BettingStrategy) -> str:
         edge = item.net_edge or Decimal(0)
         width_pct = float(abs(edge) / max_edge * 50)
         side = "right" if edge >= 0 else "left"
-        color = "var(--profit)" if edge >= 0 else "var(--loss)"
+        color = "var(--home)" if edge >= 0 else "var(--away)"
         fill_style = (
             f"left:50%; width:{width_pct:.1f}%; background:{color};"
             if side == "right"
@@ -168,10 +168,11 @@ def _allocations(strategy: BettingStrategy) -> str:
         f'plan {escape(strategy.request.plan)}; quoted {escape(strategy.quote_observed_at.isoformat())}.</p>'
     )
     legend = (
-        '<div class="ptree-legend">'
-        '<span><span class="sw" style="background:var(--profit)"></span>'
-        "positive net edge (bought — big number is that bet's share of X)</span>"
-        '<span><span class="sw" style="background:var(--loss)"></span>negative or no edge — no bet</span>'
+        '<div class="cmap-legend">'
+        '<span><span class="sw" style="background:var(--home)"></span>'
+        "blue = positive net edge (bought)</span>"
+        '<span><span class="sw" style="background:var(--away)"></span>'
+        "red = negative / no edge — no bet</span>"
         "</div>"
     )
     chart = f'<div class="edge-chart">{"".join(chart_rows)}</div>{legend}'
@@ -205,6 +206,12 @@ def _stage_bar(stage: ExitStage, total_contracts: Decimal) -> str:
     now_cls = " now" if executable else ""
     now_text = "fillable now" if executable else "not yet fillable"
     contracts = _contracts(stage.contracts)
+    safe = (
+        f'<span class="safe-star" title="Cumulative planned cash covers the conservative portfolio '
+        f'recovery target">★ safe at {_money(stage.recovery_target)}</span>'
+        if stage.safe_to_sell
+        else ""
+    )
     return (
         f'<div class="ladder-step{now_cls}">'
         f'<span class="lbl">{escape(stage.minute_range)}</span>'
@@ -213,8 +220,84 @@ def _stage_bar(stage: ExitStage, total_contracts: Decimal) -> str:
         f"— {now_text}\">"
         f'<b style="width:{share:.1f}%"></b></span>'
         f'<span class="amt"><span class="pctv">{share:.0f}%</span>'
-        f'<span class="sub3">{contracts}c · {_money(stage.cash_received)}</span></span>'
+        f'<span class="sub3">{contracts}c · {_money(stage.cash_received)}</span>{safe}</span>'
         "</div>"
+    )
+
+
+def _score_side(score: str) -> str:
+    try:
+        home, away = (int(value.replace("+", "")) for value in score.split("-", 1))
+    except ValueError:
+        return "draw"
+    return "home" if home > away else "away" if away > home else "draw"
+
+
+def _score_portfolio_distribution(strategy: BettingStrategy) -> str:
+    """Stake allocation and terminal P/L for mutually exclusive exact scores."""
+    positions = [
+        item for item in strategy.allocations if item.evaluation.quote.market == "correct_score"
+    ]
+    if not positions:
+        return ""
+    plans = {item.score: item for item in strategy.live_scores}
+    total_cost = sum((item.amount for item in positions), Decimal(0)) or Decimal(1)
+    covered_probability = Decimal(0)
+    rows: list[str] = []
+    bars: list[str] = []
+    for position in sorted(
+        positions,
+        key=lambda item: (
+            -(plans.get(item.evaluation.quote.selection).model_probability if plans.get(item.evaluation.quote.selection) else Decimal(0)),
+            item.evaluation.quote.selection,
+        ),
+    ):
+        score = position.evaluation.quote.selection
+        plan = plans.get(score)
+        probability = plan.model_probability if plan else Decimal(0)
+        covered_probability += probability
+        stake_share = position.amount / total_cost
+        net_if_final = position.gross_payout - total_cost
+        side = _score_side(score)
+        color = f"var(--{side})"
+        bars.append(
+            f'<div class="score-dist-row"><span class="score-dist-label">{escape(score)}</span>'
+            f'<div class="score-dist-track"><span style="width:{float(stake_share * 100):.1f}%;'
+            f'background:{color}"></span></div>'
+            f'<span class="score-dist-value">{stake_share:.1%} · P {probability:.1%}</span></div>'
+        )
+        rows.append(
+            "<tr>"
+            f'<td><span class="dot" style="background:{color}"></span>{escape(score)}</td>'
+            f'<td class="n">{probability:.1%}</td>'
+            f'<td class="n">{_money(position.amount)}</td>'
+            f'<td class="n">{stake_share:.1%}</td>'
+            f'<td class="n">{_contracts(position.contracts)}</td>'
+            f'<td class="n">{_money(position.gross_payout)}</td>'
+            f'<td class="n">{_money(net_if_final)}</td></tr>'
+        )
+    other_probability = max(Decimal(0), Decimal(1) - covered_probability)
+    rows.append(
+        "<tr><td>Any unowned score</td>"
+        f'<td class="n">{other_probability:.1%}</td><td class="n">$0.00</td>'
+        '<td class="n">0.0%</td><td class="n">0</td><td class="n">$0.00</td>'
+        f'<td class="n">{_money(-total_cost)}</td></tr>'
+    )
+    table = (
+        '<div style="overflow-x:auto"><table><thead><tr><th>90-minute final score</th>'
+        '<th class="n">Model P</th><th class="n">Money in</th><th class="n">Stake share</th>'
+        '<th class="n">Contracts</th><th class="n">Gross payout</th>'
+        '<th class="n">Portfolio P/L</th></tr></thead>'
+        f'<tbody>{"".join(rows)}</tbody></table></div>'
+    )
+    return (
+        '<h3>Exact-score portfolio: money distribution and 90-minute outcomes</h3>'
+        '<p class="sub">These outcomes are mutually exclusive. The stake bars add to 100%; Model P is '
+        'the ensemble probability of that final regulation score. Portfolio P/L subtracts the cost of '
+        'every exact-score position, because all losing score contracts settle at $0.</p>'
+        f'<div class="score-dist">{"".join(bars)}</div>{table}'
+        f'<p class="ladder-foot">Owned scores cover {covered_probability:.1%} of modeled outcomes; '
+        f'any other final score loses the full exact-score pool of {_money(total_cost)}.</p>'
     )
 
 
@@ -238,13 +321,36 @@ def _live(strategy: BettingStrategy) -> str:
                 f'<p class="ladder-cost">{_pct_of(item.position_cost, bankroll)} of X · '
                 f'{_money(item.position_cost)} · {held} contracts held</p>'
             )
+            if item.safe_sell_price is not None:
+                if item.safe_sell_price <= Decimal("0.99"):
+                    safe_line = (
+                        f'<p class="safe-sell"><span class="safe-star">★</span> Safe portfolio exit: '
+                        f'sell all at <strong>{_money(item.safe_sell_price)}/contract</strong> or better '
+                        f'to net at least <strong>{_money(item.safe_recovery_target)}</strong>.</p>'
+                    )
+                else:
+                    safe_line = (
+                        f'<p class="safe-sell unsafe"><span class="safe-star">★</span> Required safe price '
+                        f'is <strong>{_money(item.safe_sell_price)}/contract</strong> — above the $0.99 '
+                        f'contract ceiling, so this position alone cannot cover the branch loss.</p>'
+                    )
+            else:
+                safe_line = ""
         else:
             badge = '<span class="ladder-badge">no position · 0%</span>'
             head_note = ""
+            safe_line = ""
+        risk_line = (
+            f'<p class="ladder-risk">Impossible now: {_money(item.impossible_cost_now)} · '
+            f'next {escape(item.next_home_score)} invalidates {_money(item.next_home_goal_loss)} · '
+            f'next {escape(item.next_away_score)} invalidates {_money(item.next_away_goal_loss)} · '
+            f'3% safety target {_money(item.safe_recovery_target)}</p>'
+        )
         cards.append(
             f'<div class="ladder-card{active_cls}"><div class="ladder-head">'
             f'<span class="ladder-score">{escape(item.score)}</span>{badge}</div>'
             f"{head_note}"
+            f"{safe_line}{risk_line}"
             f'<div class="ladder-steps">{steps}</div>'
             f'<p class="ladder-foot">next goal → {escape(item.next_home_score)} or {escape(item.next_away_score)}'
             f" &nbsp;·&nbsp; if it lands before a fill: {escape(item.goal_before_fill)}</p></div>"
@@ -257,7 +363,8 @@ def _live(strategy: BettingStrategy) -> str:
     )
     return (
         '<h2>Live correct-score exit ladder</h2>'
-        f'<div class="card"><div class="ladder-grid">{"".join(cards)}</div>{legend}</div>'
+        f'<div class="card">{_score_portfolio_distribution(strategy)}'
+        f'<div class="ladder-grid">{"".join(cards)}</div>{legend}</div>'
         + _selldown(strategy)
     )
 
@@ -267,50 +374,62 @@ def _live(strategy: BettingStrategy) -> str:
 # ---------------------------------------------------------------------------
 
 def _selldown_card(item: LiveScorePlan) -> str:
-    """One position as a single cash-progress bar that fills across the windows.
-
-    The whole track = the total cash banked once the position is cleared. Each
-    window is a labelled segment that adds to the fill; a break-even line sits at
-    the entry cost, so the bar visibly crosses from "recovering stake" into pure
-    profit.
-    """
+    """Show planned cash against the portfolio-aware safe-recovery target."""
     held = item.allocated_contracts
     cost = item.position_cost
     total_cash = sum((stage.cash_received for stage in item.stages), Decimal(0)) or Decimal("0.01")
-    breakeven_pct = float(min(Decimal(1), cost / total_cash) * 100)
+    recovery_target = item.safe_recovery_target
+    scale = max(total_cash, recovery_target, Decimal("0.01"))
+    recovered = min(recovery_target, total_cash)
+    surplus = max(Decimal(0), total_cash - recovery_target)
+    shortfall = max(Decimal(0), recovery_target - total_cash)
 
-    segments: list[str] = []
+    stage_rows: list[str] = []
     running = Decimal(0)
     for stage in item.stages:
-        seg_pct = float(stage.cash_received / total_cash * 100)
+        prior = running
         running += stage.cash_received
-        # a segment is "profit" once the cash banked through it clears the cost
-        seg_cls = "profit" if running > cost else "stake"
-        label = f"{stage.minute_range}" if seg_pct >= 12 else ""
-        segments.append(
-            f'<span class="wf-seg {seg_cls}" style="width:{seg_pct:.1f}%" '
-            f'title="{escape(stage.minute_range)}: sell {_contracts(stage.contracts)}c → '
-            f'+{_money(stage.cash_received)} (banked {_money(running)})">'
-            f'<span class="wf-seglab">{escape(label)}</span></span>'
+        toward_recovery = min(stage.cash_received, max(Decimal(0), recovery_target - prior))
+        toward_surplus = max(Decimal(0), stage.cash_received - toward_recovery)
+        recovery_w = float(toward_recovery / scale * 100)
+        surplus_w = float(toward_surplus / scale * 100)
+        safe = (
+            f'<span class="safe-star" title="Cumulative cash {_money(running)} meets '
+            f'the safe target {_money(recovery_target)}">★ {_money(recovery_target)}</span>'
+            if stage.safe_to_sell
+            else ""
+        )
+        stage_rows.append(
+            f'<div class="wf-stage">'
+            f'<span class="wf-stage-lbl">{escape(stage.minute_range)}</span>'
+            f'<div class="wf-stage-bar" title="{escape(stage.minute_range)}: '
+            f'sell {_contracts(stage.contracts)}c → +{_money(stage.cash_received)}">'
+            f'<span class="wf-seg stake" style="width:{recovery_w:.1f}%"></span>'
+            f'<span class="wf-seg profit" style="width:{surplus_w:.1f}%"></span>'
+            f"</div>"
+            f'<span class="wf-stage-amt">+{_money(stage.cash_received)}{safe}</span></div>'
         )
 
-    profit = total_cash - cost
-    profit_cls = "profit" if profit > 0 else ("loss" if profit < 0 else "")
-    steps_text = " → ".join(
-        f"{escape(stage.minute_range)} {_contracts(stage.contracts)}c" for stage in item.stages
-    )
+    recovery_pct = float(recovered / scale * 100)
+    surplus_pct = float(surplus / scale * 100)
+    shortfall_pct = float(shortfall / scale * 100)
+    result_cls = "profit" if surplus > 0 else "loss" if shortfall > 0 else ""
     return (
         f'<div class="wf-card"><div class="wf-head">'
         f'<span class="wf-score">{escape(item.score)}</span>'
         f'<span class="wf-sub">{_contracts(held)} contracts · {_money(cost)} in</span></div>'
-        f'<div class="wf-bar">{"".join(segments)}'
-        f'<span class="wf-breakeven" style="left:{breakeven_pct:.1f}%" '
-        f'title="break-even — stake {_money(cost)} recovered"></span></div>'
-        f'<div class="wf-scale"><span>$0</span><span>sell: {steps_text}</span>'
-        f'<span>{_money(total_cash)}</span></div>'
-        f'<div class="wf-result {profit_cls}">'
-        f'cash out {_money(total_cash)} − cost {_money(cost)} = '
-        f'<strong>{_money(profit)}</strong> profit if all stages fill</div>'
+        f'<div class="wf-summary-bar" title="Blue covers the conservative next-goal portfolio loss; '
+        f'red is cash above that safety target">'
+        f'<span class="wf-seg stake" style="width:{recovery_pct:.1f}%">'
+        f'<span class="wf-seglab">covered {_money(recovered)}</span></span>'
+        f'<span class="wf-seg profit" style="width:{surplus_pct:.1f}%">'
+        f'<span class="wf-seglab">surplus {_money(surplus)}</span></span>'
+        f'<span class="wf-seg shortfall" style="width:{shortfall_pct:.1f}%">'
+        f'<span class="wf-seglab">short {_money(shortfall)}</span></span></div>'
+        f'<div class="wf-stages">{"".join(stage_rows)}</div>'
+        f'<div class="wf-result {result_cls}">'
+        f'planned cash {_money(total_cash)} vs safe portfolio target {_money(recovery_target)} = '
+        f'<strong>{_money(total_cash - recovery_target)}</strong></div>'
         "</div>"
     )
 
@@ -321,15 +440,19 @@ def _selldown(strategy: BettingStrategy) -> str:
         return ""
     cards = "".join(_selldown_card(item) for item in active)
     legend = (
-        '<div class="ptree-legend">'
-        '<span><span class="sw" style="background:color-mix(in srgb,var(--profit) 35%,var(--card))"></span>'
-        "recovering your stake</span>"
-        '<span><span class="sw" style="background:var(--profit)"></span>pure profit (past break-even)</span>'
-        '<span><span class="sw wf-belegend"></span>break-even line = entry cost</span>'
+        '<div class="cmap-legend">'
+        '<span><span class="sw" style="background:var(--home)"></span>'
+        "blue = covering next-goal invalidated positions</span>"
+        '<span><span class="sw" style="background:var(--away)"></span>'
+        "red = cash above the safe target</span>"
+        '<span><span class="sw" style="background:var(--bar)"></span>'
+        "grey = unrecovered shortfall</span>"
+        '<span><span class="safe-star">★ $</span> first stage where cumulative cash is safe</span>'
         "</div>"
-        '<p class="foot">One bar per open position. It fills left-to-right as you sell out over the three '
-        "windows (each segment is one window); the vertical line is your entry cost, so everything to its "
-        "right is profit. The bar's full width is the total cash you collect if every stage fills.</p>"
+        '<p class="foot">“Safe” is conservative: cash from selling this score must cover the larger '
+        "of the two exact-score costs made impossible by the next home or away goal, plus the strategy "
+        "safety margin. It assumes the displayed limit price fills with sufficient bid depth before "
+        "another goal; it is not guaranteed.</p>"
     )
     return (
         '<h2>Position sell-down, step by step</h2>'
@@ -350,17 +473,12 @@ def _pl_class(profit: Decimal) -> str:
 
 
 def _node_fill(profit: Decimal, reference: Decimal) -> str:
-    """A sequential wash whose depth tracks the size of the swing.
-
-    One hue per sign (green for profit, red for loss); the mix percentage — and
-    therefore the colour intensity — scales with |profit| against the largest
-    swing in the whole ledger, so a bigger win/loss reads as a darker node.
-    """
+    """Blue (profit) / red (loss) intensity scales with |P/L| vs the largest swing."""
     if profit == 0 or reference == 0:
         return "background:var(--card);"
-    hue = "var(--profit)" if profit > 0 else "var(--loss)"
+    hue = "var(--home)" if profit > 0 else "var(--away)"
     depth = float(min(Decimal(1), abs(profit) / reference))
-    pct = 12 + depth * 46  # 12%..58% tint over the card surface
+    pct = 12 + depth * 46
     return f"background:color-mix(in srgb,{hue} {pct:.0f}%,var(--card));"
 
 
@@ -425,12 +543,13 @@ def _paths(strategy: BettingStrategy) -> str:
         f'<div class="ptree-branches">{"".join(branch_html)}</div></div>'
     )
     legend = (
-        '<div class="ptree-legend">'
-        '<span><span class="sw" style="background:var(--profit)"></span>'
-        "net profit (% of X) — deeper green = bigger swing</span>"
-        '<span><span class="sw" style="background:var(--loss)"></span>net loss — deeper red = bigger swing</span>'
-        '<span><span class="sw" style="background:var(--accent)"></span>'
-        "dot lit = that fixed-profit milestone reached</span>"
+        '<div class="cmap-legend">'
+        '<span><span class="sw" style="background:var(--home)"></span>'
+        "blue = net profit (% of X) — deeper = bigger swing</span>"
+        '<span><span class="sw" style="background:var(--away)"></span>'
+        "red = net loss — deeper = bigger swing</span>"
+        '<span><span class="sw" style="background:var(--home)"></span>'
+        "dot lit = fixed-profit milestone reached</span>"
         "</div>"
     )
     table_rows = [

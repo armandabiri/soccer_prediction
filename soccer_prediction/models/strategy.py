@@ -153,6 +153,9 @@ class ExitStage:
     contracts: Decimal
     cash_received: Decimal
     profit_locked: Decimal
+    cumulative_cash: Decimal = ZERO
+    recovery_target: Decimal = ZERO
+    safe_to_sell: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -198,6 +201,11 @@ class LiveScorePlan:
     next_away_score: str
     goal_before_fill: str
     assumptions: str
+    impossible_cost_now: Decimal = ZERO
+    next_home_goal_loss: Decimal = ZERO
+    next_away_goal_loss: Decimal = ZERO
+    safe_recovery_target: Decimal = ZERO
+    safe_sell_price: Decimal | None = None
 
 
 @dataclass(frozen=True, slots=True)

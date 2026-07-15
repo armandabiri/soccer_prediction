@@ -149,7 +149,7 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .neg { color:#c0362c; font-weight:600; }
 .sgrid-wrap { overflow-x:auto; margin:10px 0 6px; }
 .sgrid { display:grid; gap:4px; }
-.scell { min-height:112px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+.scell { min-height:132px; display:flex; flex-direction:column; align-items:center; justify-content:center;
   border-radius:6px; padding:5px 3px; font-variant-numeric:tabular-nums; border:1px solid transparent; }
 .scell.prob { background:color-mix(in srgb,var(--home) var(--strength),var(--card));
   border-color:color-mix(in srgb,var(--home) 30%,transparent); }
@@ -158,6 +158,10 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .scell.strong .sc-est { color:rgba(255,255,255,.7); }
 .sc-win { font-size:.68rem; font-weight:700; color:#1a7f37; margin-top:3px; }
 .sc-loss { font-size:.58rem; color:#c0362c; line-height:1.35; }
+.sc-lost { font-size:.58rem; font-weight:700; color:#c0362c; line-height:1.4; margin-top:2px; }
+.sc-poss { font-size:.58rem; font-weight:700; color:#1a7f37; line-height:1.4; }
+.scell.strong .sc-lost { color:#ffb4ad; }
+.scell.strong .sc-poss { color:#9df5bd; }
 .sc-net { font-size:.58rem; font-weight:600; margin-top:2px; padding-top:2px;
   border-top:1px solid color-mix(in srgb,currentColor 22%,transparent); }
 .sc-net.pos { color:#1a7f37; } .sc-net.neg { color:#c0362c; }
@@ -171,6 +175,15 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .sc-bet { font-size:.78rem; font-weight:700; margin-top:2px; }
 .sc-est { font-size:.55rem; color:var(--muted); }
 .sgrid-axis { color:var(--muted); font-size:.72rem; font-weight:600; margin:0 0 4px; }
+.lost-key { color:#c0362c; } .poss-key { color:#1a7f37; }
+.risk-control { display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:10px 0 14px;
+  padding:9px 12px; background:var(--bar); border-radius:10px; max-width:520px; }
+.risk-label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--muted); }
+.risk-end { font-size:.68rem; color:var(--muted); white-space:nowrap; }
+.risk-slider { flex:1 1 150px; min-width:120px; accent-color:var(--home); cursor:pointer; }
+.risk-value { font-size:.8rem; font-weight:700; font-variant-numeric:tabular-nums; min-width:38px;
+  text-align:right; }
 .sgrid-side { display:flex; align-items:center; gap:8px; }
 .sgrid-side-label { writing-mode:vertical-rl; transform:rotate(180deg); color:var(--muted); font-size:.72rem;
   font-weight:600; white-space:nowrap; }

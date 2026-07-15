@@ -39,6 +39,11 @@ __all__ = [
 # takes a positive stake and contributes positive risk.
 _EPSILON = 1e-4
 
+# How far to lean on the model by default: half flat (price-proportional, equal
+# payout), half opinionated (probability-proportional). Matches the report's
+# risk slider, which starts at 50%.
+DEFAULT_RISK = 0.5
+
 
 @dataclass(frozen=True, slots=True)
 class ScoreQuote:
@@ -79,17 +84,28 @@ class ScoreStake:
 
 @dataclass(frozen=True, slots=True)
 class GridHedgePlan:
-    """An equal-payout hedge over every score within a goal cap."""
+    """A staking plan over every score within a goal cap.
+
+    ``risk`` slides the money between two shapes. At 0 the stakes are
+    price-proportional, so every covered score returns exactly the same -- the
+    flat, equal-payout hedge. At 1 they follow the model's probabilities, paying
+    far more on the scores the model likes and less on the rest. In between the
+    payouts spread out, so ``guaranteed_*`` become the *worst* covered case and
+    ``max_*`` the best; only at ``risk == 0`` are they equal.
+    """
 
     label: str
     max_goals: int
     bankroll: float
+    risk: float
     stakes: tuple[ScoreStake, ...]
     total_price: float
     covered_probability: float
     guaranteed_return: float
     guaranteed_profit: float
     guaranteed_roi: float
+    max_return: float
+    max_profit: float
     worst_case_loss: float
     expected_value: float
     expected_profit: float
@@ -174,20 +190,29 @@ def build_grid_hedge(
     bankroll: float,
     max_goals: int,
     label: str | None = None,
+    risk: float = DEFAULT_RISK,
 ) -> GridHedgePlan:
-    """Distribute ``bankroll`` for an equal payout across every score within ``max_goals``.
+    """Distribute ``bankroll`` across every score within ``max_goals``.
 
-    Stakes are set proportional to each price so the number of contracts is the
-    same on every covered score; whichever covered score lands returns
-    ``bankroll / sum(prices)``. The plan is a genuine arbitrage only when the
-    covered prices sum to under 1.00 -- otherwise even a covered score returns
-    less than the stake. The model probabilities give ``covered_probability``
-    (the real chance any covered score occurs) and the expected profit.
+    ``risk`` picks the shape of the money, from flat to opinionated:
+
+    * ``0.0`` -- stakes proportional to price. Every covered score buys the same
+      number of contracts, so every covered score returns the identical
+      ``bankroll / sum(prices)``. Safe and shapeless: it is an arbitrage exactly
+      when the covered prices sum below 1.00.
+    * ``1.0`` -- stakes proportional to the model's probabilities. The scores the
+      model likes get the money and pay big; the rest pay under the stake. This
+      wins more when the model is right and less when it is wrong.
+    * in between -- a linear blend, so payouts spread around the flat line.
+
+    Above ``risk == 0`` the payout is no longer uniform, so ``guaranteed_*``
+    describe the *worst* covered score and ``max_*`` the best.
     """
     if bankroll <= 0.0:
         raise ValueError("bankroll must be positive")
     if max_goals < 0:
         raise ValueError("max_goals must be non-negative")
+    risk = min(1.0, max(0.0, risk))
     # Floor every price and probability so no scoreline is ever treated as zero
     # (no zero stake, no divide-by-zero, no silently dropped outcome).
     covered = tuple(
@@ -204,39 +229,61 @@ def build_grid_hedge(
     if not covered:
         raise ValueError(f"no scorelines within a {max_goals}-goal cap")
     total_price = sum(quote.price for quote in covered)
-    contracts = bankroll / total_price  # equal contract count on every covered score
-    guaranteed_return = contracts  # each covered contract settles at 1.00
-    covered_probability = min(1.0, sum(quote.probability for quote in covered))
-    expected_value = covered_probability * guaranteed_return
+    total_probability = sum(quote.probability for quote in covered)
+    covered_probability = min(1.0, total_probability)
     stakes = tuple(
-        ScoreStake(
-            home_goals=quote.home_goals,
-            away_goals=quote.away_goals,
-            price=quote.price,
-            probability=quote.probability,
-            stake=contracts * quote.price,
-            contracts=contracts,
-            payout_if_hit=guaranteed_return,
-            profit_if_hit=guaranteed_return - bankroll,
-            value_edge=quote.probability - quote.price,
-            estimated_price=quote.estimated_price,
-        )
+        _stake_for(quote, bankroll=bankroll, risk=risk, price_sum=total_price, prob_sum=total_probability)
         for quote in sorted(covered, key=lambda item: -item.price)
     )
+    payouts = [item.payout_if_hit for item in stakes]
+    worst_return, best_return = min(payouts), max(payouts)
+    expected_value = sum(item.probability * item.payout_if_hit for item in stakes)
     return GridHedgePlan(
         label=label or f"0-{max_goals} goals",
         max_goals=max_goals,
         bankroll=bankroll,
+        risk=risk,
         stakes=stakes,
         total_price=total_price,
         covered_probability=covered_probability,
-        guaranteed_return=guaranteed_return,
-        guaranteed_profit=guaranteed_return - bankroll,
-        guaranteed_roi=(guaranteed_return - bankroll) / bankroll,
+        guaranteed_return=worst_return,
+        guaranteed_profit=worst_return - bankroll,
+        guaranteed_roi=(worst_return - bankroll) / bankroll,
+        max_return=best_return,
+        max_profit=best_return - bankroll,
         worst_case_loss=-bankroll,
         expected_value=expected_value,
         expected_profit=expected_value - bankroll,
-        is_true_arbitrage=total_price < 1.0,
+        # An arbitrage means *every* covered score profits, i.e. even the worst
+        # one clears the stake. At risk 0 that reduces to sum(prices) < 1.
+        is_true_arbitrage=worst_return > bankroll,
+    )
+
+
+def _stake_for(
+    quote: ScoreQuote,
+    *,
+    bankroll: float,
+    risk: float,
+    price_sum: float,
+    prob_sum: float,
+) -> ScoreStake:
+    """Size one score: blend its price share with its probability share by ``risk``."""
+    price_share = quote.price / price_sum if price_sum > 0 else 0.0
+    prob_share = quote.probability / prob_sum if prob_sum > 0 else 0.0
+    stake = bankroll * ((1.0 - risk) * price_share + risk * prob_share)
+    contracts = stake / quote.price
+    return ScoreStake(
+        home_goals=quote.home_goals,
+        away_goals=quote.away_goals,
+        price=quote.price,
+        probability=quote.probability,
+        stake=stake,
+        contracts=contracts,
+        payout_if_hit=contracts,  # each contract settles at 1.00
+        profit_if_hit=contracts - bankroll,
+        value_edge=quote.probability - quote.price,
+        estimated_price=quote.estimated_price,
     )
 
 
@@ -245,8 +292,9 @@ def build_grid_hedges(
     *,
     caps: Sequence[int] = (3, 2),
     bankroll: float | None = None,
+    risk: float = DEFAULT_RISK,
 ) -> tuple[GridHedgePlan, ...]:
-    """Build one equal-payout plan per goal cap (default: the 0-3 and 0-2 grids)."""
+    """Build one staking plan per goal cap (default: the 0-3 and 0-2 grids)."""
     stake_bankroll = grid.bankroll if bankroll is None else bankroll
     return tuple(
         build_grid_hedge(
@@ -254,6 +302,7 @@ def build_grid_hedges(
             bankroll=stake_bankroll,
             max_goals=cap,
             label=f"0-{cap} goals ({cap}-goal cap)",
+            risk=risk,
         )
         for cap in caps
     )

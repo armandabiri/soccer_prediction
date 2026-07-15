@@ -161,7 +161,7 @@ FIXTURES: dict[str, FixtureSpec] = {
     ),
 }
 
-DEFAULT_FIXTURE = "argentina_england"
+DEFAULT_FIXTURE = "spain_france"
 
 
 class FixtureDataSource:

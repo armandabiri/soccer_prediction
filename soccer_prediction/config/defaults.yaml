@@ -19,3 +19,11 @@ model:
   opponent_network_max_teams: 12
   morale_decay_xi: 0.0077
   morale_max_effect: 0.08
+  # Bayesian prior weight for attack/defence shrinkage (lower = more form-responsive).
+  rate_prior_weight: 4.0
+  # When facing another strong side, mildly regress ultra-tight defence factors
+  # toward 1 via defence_weakness ** elite_defence_exponent (1.0 = off).
+  # Kept gentle after Spain 2-0 France: that game was low-scoring, not open.
+  elite_defence_exponent: 0.85
+  # Small total-goals scale for strong-vs-strong meetings (0 = off).
+  elite_tempo_strength: 0.08

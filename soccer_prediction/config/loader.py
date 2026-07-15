@@ -51,6 +51,9 @@ class ModelConfig:
     opponent_network_max_teams: int = 12
     morale_decay_xi: float = 0.0077
     morale_max_effect: float = 0.08
+    rate_prior_weight: float = 4.0
+    elite_defence_exponent: float = 0.85
+    elite_tempo_strength: float = 0.08
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,6 +109,9 @@ def _apply_env(config: dict[str, Any]) -> dict[str, Any]:
         ("model", "opponent_network_max_teams"): os.getenv("SOCCER_PREDICTION_MODEL_OPPONENT_NETWORK_MAX_TEAMS"),
         ("model", "morale_decay_xi"): os.getenv("SOCCER_PREDICTION_MODEL_MORALE_DECAY_XI"),
         ("model", "morale_max_effect"): os.getenv("SOCCER_PREDICTION_MODEL_MORALE_MAX_EFFECT"),
+        ("model", "rate_prior_weight"): os.getenv("SOCCER_PREDICTION_MODEL_RATE_PRIOR_WEIGHT"),
+        ("model", "elite_defence_exponent"): os.getenv("SOCCER_PREDICTION_MODEL_ELITE_DEFENCE_EXPONENT"),
+        ("model", "elite_tempo_strength"): os.getenv("SOCCER_PREDICTION_MODEL_ELITE_TEMPO_STRENGTH"),
         ("rate_limits", "api_football"): os.getenv("SOCCER_PREDICTION_RATE_LIMITS_API_FOOTBALL"),
     }
     updated = dict(config)
@@ -126,7 +132,14 @@ def _apply_env(config: dict[str, Any]) -> dict[str, Any]:
             "api_football",
         }:
             section_data[key] = int(raw_value)
-        elif key in {"time_decay_xi", "morale_decay_xi", "morale_max_effect"}:
+        elif key in {
+            "time_decay_xi",
+            "morale_decay_xi",
+            "morale_max_effect",
+            "rate_prior_weight",
+            "elite_defence_exponent",
+            "elite_tempo_strength",
+        }:
             section_data[key] = float(raw_value)
         else:
             section_data[key] = raw_value
@@ -166,6 +179,9 @@ def load_config(path: str | Path | None = None) -> AppConfig:
             opponent_network_max_teams=int(model_data.get("opponent_network_max_teams", 12)),
             morale_decay_xi=float(model_data.get("morale_decay_xi", 0.0077)),
             morale_max_effect=float(model_data.get("morale_max_effect", 0.08)),
+            rate_prior_weight=float(model_data.get("rate_prior_weight", 4.0)),
+            elite_defence_exponent=min(1.0, max(0.35, float(model_data.get("elite_defence_exponent", 0.85)))),
+            elite_tempo_strength=min(1.0, max(0.0, float(model_data.get("elite_tempo_strength", 0.08)))),
         ),
     )
 

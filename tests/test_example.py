@@ -91,7 +91,7 @@ def test_other_fixtures_load_independently() -> None:
     assert {"Spain", "Belgium"} <= {record.team for record in spain_belgium}
     assert {"Spain", "France"} <= {record.team for record in spain_france}
     assert {"Argentina", "England"} <= {record.team for record in argentina_england}
-    # Opponents may overlap across fixtures via the network pack; primary pairs must not.
+    # Primary pairs stay distinct even when opponent-network packs overlap.
     assert "England" not in {record.team for record in argentina_egypt}
-    assert "Belgium" not in {record.team for record in spain_france}
     assert "Morocco" not in {record.team for record in spain_belgium}
+    assert "Egypt" not in {record.team for record in france_morocco}

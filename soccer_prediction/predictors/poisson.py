@@ -54,20 +54,60 @@ def expected_goals(
     neutral_venue: bool = False,
 ) -> tuple[float, float]:
     """Estimate home and away goal expectations."""
+    model = load_config().model
     league_rate = max(rates.global_rates.goals_for, 0.8)
     home_edge, away_edge = (1.0, 1.0) if neutral_venue else (1.08, 0.92)
-    home_lambda = league_rate * rates.attack_for(home) * rates.defence_weakness_for(away) * home_edge
-    away_lambda = league_rate * rates.attack_for(away) * rates.defence_weakness_for(home) * away_edge
+    away_defence = _effective_defence(rates, defender=away, attacker=home, exponent=model.elite_defence_exponent)
+    home_defence = _effective_defence(rates, defender=home, attacker=away, exponent=model.elite_defence_exponent)
+    home_lambda = league_rate * rates.attack_for(home) * away_defence * home_edge
+    away_lambda = league_rate * rates.attack_for(away) * home_defence * away_edge
     home_lambda, away_lambda = _blend_head_to_head(
         rates, home, away, home_lambda, away_lambda, neutral_venue=neutral_venue
     )
     morale_edge = min(1.0, max(-1.0, (rates.morale_for(home) - rates.morale_for(away)) / 2.0))
-    morale_effect = min(0.15, max(0.0, load_config().model.morale_max_effect))
+    morale_effect = min(0.15, max(0.0, model.morale_max_effect))
     home_lambda *= 1.0 + morale_effect * morale_edge
     away_lambda *= 1.0 - morale_effect * morale_edge
+    tempo = _elite_match_tempo(rates, home, away, strength=model.elite_tempo_strength)
+    home_lambda *= tempo
+    away_lambda *= tempo
     home_lambda = min(4.5, max(0.2, home_lambda))
     away_lambda = min(4.5, max(0.2, away_lambda))
     return home_lambda, away_lambda
+
+
+def _effective_defence(rates: RateBook, *, defender: str, attacker: str, exponent: float) -> float:
+    """Soften ultra-tight defence ratings when the attacker is also strong.
+
+    Concession factors earned mostly against weaker sides understate scoring in
+    elite-vs-elite games; raising weakness toward 1.0 (via exponent < 1) fixes
+    that without globally inflating mismatches.
+    """
+    weakness = rates.defence_weakness_for(defender)
+    if exponent >= 0.999 or rates.attack_for(attacker) < 0.95 or weakness >= 0.70:
+        return weakness
+    return max(0.35, weakness**exponent)
+
+
+def _elite_match_tempo(rates: RateBook, home: str, away: str, *, strength: float) -> float:
+    """Raise expected totals when two strong, low-concession sides meet.
+
+    Multiplicative attack×defence models systematically understate open elite
+    knockouts: both teams look like they "never concede" because their history
+    is dominated by weaker opponents. A modest tempo uplift corrects that
+    without globally inflating mismatches against weak sides.
+    """
+    if strength <= 0:
+        return 1.0
+    attack = (rates.attack_for(home) * rates.attack_for(away)) ** 0.5
+    defence_strength = (
+        (1.0 / max(rates.defence_weakness_for(home), 0.35))
+        * (1.0 / max(rates.defence_weakness_for(away), 0.35))
+    ) ** 0.5
+    if attack < 0.90 or defence_strength < 1.35:
+        return 1.0
+    excess = (defence_strength - 1.35) * attack
+    return min(1.40, 1.0 + strength * excess)
 
 
 def _blend_head_to_head(

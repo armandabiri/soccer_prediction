@@ -74,6 +74,7 @@ def compute_rates(history: Sequence[TeamMatchStats], *, today: date | None = Non
         prior = _default_prior()
         return RateBook(team_rates={}, global_rates=prior)
     model_config = load_config().model
+    prior_weight = max(0.5, model_config.rate_prior_weight)
     totals_by_team: dict[str, dict[str, float]] = {}
     totals_by_matchup: dict[tuple[str, str], dict[str, float]] = {}
     global_totals = _empty_totals()
@@ -98,17 +99,25 @@ def compute_rates(history: Sequence[TeamMatchStats], *, today: date | None = Non
         return RateBook(team_rates={}, global_rates=prior)
     global_rates = _rates_from_totals(global_totals, max(global_totals["weight"], 1e-9))
     team_rates = {
-        team: _shrink(_rates_from_totals(totals, max(totals["weight"], 1e-9)), global_rates, totals["weight"])
+        team: _shrink(
+            _rates_from_totals(totals, max(totals["weight"], 1e-9)),
+            global_rates,
+            totals["weight"],
+            prior_weight=prior_weight,
+        )
         for team, totals in totals_by_team.items()
     }
     matchup_rates = {
         teams: _rates_from_totals(totals, max(totals["weight"], 1e-9))
         for teams, totals in totals_by_matchup.items()
     }
-    attack, defence = _network_strengths(weighted_records, max(global_rates.goals_for, 0.8))
+    attack, defence = _network_strengths(
+        weighted_records, max(global_rates.goals_for, 0.8), prior_weight=prior_weight
+    )
     corner_attack, corner_concession = _network_corner_strengths(
         weighted_records,
         max(global_rates.corners_for, 4.0),
+        prior_weight=prior_weight,
     )
     morale = {
         team: signal[0]
@@ -168,7 +177,7 @@ def _default_prior() -> TeamRates:
 def _network_strengths(
     weighted_records: Sequence[tuple[TeamMatchStats, float]],
     league_rate: float,
-    prior_weight: float = 6.0,
+    prior_weight: float = 3.0,
 ) -> tuple[dict[str, float], dict[str, float]]:
     """Iteratively adjust attack and defence for the strength of connected opponents."""
     names = {
@@ -210,7 +219,7 @@ def _network_strengths(
 def _network_corner_strengths(
     weighted_records: Sequence[tuple[TeamMatchStats, float]],
     league_rate: float,
-    prior_weight: float = 6.0,
+    prior_weight: float = 3.0,
 ) -> tuple[dict[str, float], dict[str, float]]:
     """Adjust corner production for the corner strength of connected opponents."""
     usable = tuple(
@@ -271,7 +280,7 @@ def _rates_from_totals(totals: dict[str, float], weight: float) -> TeamRates:
     )
 
 
-def _shrink(raw: TeamRates, prior: TeamRates, sample_size: float, prior_weight: float = 6.0) -> TeamRates:
+def _shrink(raw: TeamRates, prior: TeamRates, sample_size: float, prior_weight: float = 3.0) -> TeamRates:
     raw_weight = sample_size / (sample_size + prior_weight)
     prior_share = 1.0 - raw_weight
     return TeamRates(

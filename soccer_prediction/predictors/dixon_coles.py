@@ -60,17 +60,25 @@ def _factory() -> DixonColesPredictor:
 
 def _apply_tau(base: ScorelineGrid, home_lambda: float, away_lambda: float, rho: float) -> ScorelineGrid:
     rows = [list(row) for row in base.probabilities]
+    # Soften the classical (1,1) boost once expected totals leave the low-score
+    # regime; otherwise Dixon-Coles keeps pinning the mode on 1-1 in open games.
+    total = home_lambda + away_lambda
+    one_one_scale = 1.0 if total <= 2.6 else max(0.20, 1.0 - 0.40 * (total - 2.6))
     factors = {
         (0, 0): 1.0 - home_lambda * away_lambda * rho,
         (0, 1): 1.0 + home_lambda * rho,
         (1, 0): 1.0 + away_lambda * rho,
-        (1, 1): 1.0 - rho,
+        (1, 1): 1.0 - rho * one_one_scale,
     }
     for (home_goals, away_goals), factor in factors.items():
         if home_goals <= base.home_goals_max and away_goals <= base.away_goals_max:
             rows[home_goals][away_goals] *= max(0.01, factor)
-    total = sum(value for row in rows for value in row)
-    return ScorelineGrid(base.home_goals_max, base.away_goals_max, tuple(tuple(value / total for value in row) for row in rows))
+    total_mass = sum(value for row in rows for value in row)
+    return ScorelineGrid(
+        base.home_goals_max,
+        base.away_goals_max,
+        tuple(tuple(value / total_mass for value in row) for row in rows),
+    )
 
 
 def _estimate_rho(poisson: PoissonPredictor, history: Sequence[TeamMatchStats], *, as_of: date | None) -> float:

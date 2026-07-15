@@ -147,6 +147,39 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
 .foot { color:var(--muted); font-size:.82rem; margin-top:24px; }
 .pos { color:#1a7f37; font-weight:600; }
 .neg { color:#c0362c; font-weight:600; }
+.sgrid-wrap { overflow-x:auto; margin:10px 0 6px; }
+.sgrid { display:grid; gap:4px; }
+.scell { min-height:112px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  border-radius:6px; padding:5px 3px; font-variant-numeric:tabular-nums; border:1px solid transparent; }
+.scell.prob { background:color-mix(in srgb,var(--home) var(--strength),var(--card));
+  border-color:color-mix(in srgb,var(--home) 30%,transparent); }
+.scell.strong { color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.35); }
+.scell.strong .sc-prob { color:rgba(255,255,255,.82); }
+.scell.strong .sc-est { color:rgba(255,255,255,.7); }
+.sc-win { font-size:.68rem; font-weight:700; color:#1a7f37; margin-top:3px; }
+.sc-loss { font-size:.58rem; color:#c0362c; line-height:1.35; }
+.sc-net { font-size:.58rem; font-weight:600; margin-top:2px; padding-top:2px;
+  border-top:1px solid color-mix(in srgb,currentColor 22%,transparent); }
+.sc-net.pos { color:#1a7f37; } .sc-net.neg { color:#c0362c; }
+.scell.strong .sc-win { color:#9df5bd; }
+.scell.strong .sc-loss { color:#ffc2bc; }
+.scell.strong .sc-net.pos { color:#9df5bd; } .scell.strong .sc-net.neg { color:#ffb4ad; }
+.scell.axis { min-height:24px; background:transparent; color:var(--muted); font-weight:700; font-size:.72rem; }
+.scell.blank { min-height:24px; background:transparent; }
+.sc-score { font-size:.78rem; font-weight:700; letter-spacing:.02em; }
+.sc-prob { font-size:.64rem; color:var(--muted); margin-top:1px; }
+.sc-bet { font-size:.78rem; font-weight:700; margin-top:2px; }
+.sc-est { font-size:.55rem; color:var(--muted); }
+.sgrid-axis { color:var(--muted); font-size:.72rem; font-weight:600; margin:0 0 4px; }
+.sgrid-side { display:flex; align-items:center; gap:8px; }
+.sgrid-side-label { writing-mode:vertical-rl; transform:rotate(180deg); color:var(--muted); font-size:.72rem;
+  font-weight:600; white-space:nowrap; }
+.sgrid-legend { max-width:330px; margin:8px 0 2px; }
+.sgrid-gradient { height:9px; border-radius:6px;
+  background:linear-gradient(90deg,var(--card),color-mix(in srgb,var(--home) 50%,var(--card)),var(--home));
+  border:1px solid var(--line); }
+.sgrid-legend .heat-labels { display:flex; justify-content:space-between; color:var(--muted);
+  font-size:.7rem; margin-top:3px; }
 .hedge-summary { display:flex; flex-wrap:wrap; gap:10px 18px; margin:12px 0 22px; }
 .hedge-stat { display:flex; flex-direction:column; min-width:118px; padding:8px 12px; background:var(--bar);
   border-radius:10px; }

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from soccer_prediction.example.fixture_example import build_forecast
@@ -95,21 +97,25 @@ def test_bundled_argentina_england_grid_loads_and_plans() -> None:
     """The packaged ENG/ARG grid yields the 0-3 and 0-2 plans over $500."""
     grid = load_packaged_score_grid("correct_score_argentina_england.yaml")
     assert grid.home == "England" and grid.away == "Argentina"
-    assert len(grid.quotes) == 16
+    assert len(grid.quotes) == 25  # the full 0-4 grid
     plan_three, plan_two = build_grid_hedges(grid, caps=(3, 2))
     assert len(plan_three.stakes) == 16
     assert len(plan_two.stakes) == 9
     assert plan_two.guaranteed_return > plan_three.guaranteed_return
-    # Every price is now a real market quote; none are model-filled.
+    # Every score inside the 0-3 grid was read off a screenshot; only the six
+    # never-visible 4-goal scores are assumed.
     assert not any(stake.estimated_price for stake in plan_three.stakes)
-    # At the real 11% prices for 0-0/1-0/0-1 the full 0-3 grid is priced out of
-    # arbitrage (sum > 1.00) while the tighter 0-2 grid still clears it.
+    plan_four = build_grid_hedges(grid, caps=(4,))[0]
+    assumed = {stake.label for stake in plan_four.stakes if stake.estimated_price}
+    assert assumed == {"4-0", "4-1", "4-3", "4-4", "0-4", "3-4"}
+    # At the displayed prices the 0-3 grid is just past break-even (sum > 1.00)
+    # while the tighter 0-2 grid still clears it.
     assert plan_three.total_price > 1.0
     assert not plan_three.is_true_arbitrage
     assert plan_three.guaranteed_profit < 0.0
     assert plan_two.is_true_arbitrage
-    assert plan_two.guaranteed_profit > 0.0
-    # Both are still negative once the chance of an uncovered score is priced in.
+    assert 0.0 < plan_two.guaranteed_profit < 30.0  # a sliver, not the $184 my bad estimates implied
+    # Every grid is still negative once the chance of an uncovered score counts.
     assert plan_three.expected_profit < 0.0
     assert plan_two.expected_profit < 0.0
 
@@ -118,8 +124,81 @@ def test_report_section_appears_only_with_a_price_grid() -> None:
     """The hedge section renders for ENG/ARG and is absent for fixtures without a grid."""
     forecast = build_forecast(key="argentina_england", live=False)
     section = score_hedge_section(forecast)
-    assert "Guaranteed-win score hedge" in section
-    assert "0-2 goals" in section
+    assert "Score-grid staking plans" in section
+    # Every requested grid gets its own table, plus the at-a-glance comparison.
+    for cap in (1, 2, 3, 4):
+        assert f"0-{cap} grid" in section
+    assert "All grids at a glance" in section
+    assert "Most you can lose" in section
+    assert "Most you can profit" in section
     assert "Expected profit" in section
-    other = build_forecast(key="spain_france", live=False)
-    assert score_hedge_section(other) == ""
+
+
+def test_unpriced_fixture_explains_itself_instead_of_vanishing() -> None:
+    """A fixture with no bundled quotes says so, and names the file it would need."""
+    section = score_hedge_section(build_forecast(key="spain_france", live=False))
+    assert "Score-grid staking plans" in section  # the heading still appears
+    assert "No market prices are bundled" in section
+    assert "correct_score_spain_france.yaml" in section
+    # It must not invent a plan out of model probabilities.
+    assert "sc-score" not in section
+    assert "Most you can profit" not in section
+
+
+def test_each_grid_renders_as_a_square_matrix() -> None:
+    """Every plan is laid out as a (cap+1) x (cap+1) score square with both axes."""
+    section = score_hedge_section(build_forecast(key="argentina_england", live=False))
+    for cap in (1, 2, 3, 4):
+        block = section.split(f"0-{cap} grid")[1].split("hedge-summary")[0]
+        assert len(re.findall(r'class="sc-score"', block)) == (cap + 1) ** 2
+        assert len(re.findall(r'class="scell axis"', block)) == 2 * (cap + 1)
+    assert "England goals" in section and "Argentina goals" in section
+
+
+def test_each_tile_shows_gross_win_and_both_loss_figures() -> None:
+    """Each tile states what it pays if it lands, and what dies in either world."""
+    section = score_hedge_section(build_forecast(key="argentina_england", live=False))
+    grid = load_packaged_score_grid("correct_score_argentina_england.yaml")
+    plans = {plan.max_goals: plan for plan in build_grid_hedges(grid, caps=(1, 2, 3, 4))}
+    tile_re = re.compile(
+        r'class="sc-score">(\d-\d)<.*?class="sc-win">win \$([\d.]+)<'
+        r'.*?others -\$([\d.]+)<.*?this -\$([\d.]+)<',
+        re.DOTALL,
+    )
+    for cap, plan in plans.items():
+        block = section.split(f"0-{cap} grid")[1].split("hedge-summary")[0]
+        tiles = tile_re.findall(block)
+        assert len(tiles) == (cap + 1) ** 2
+        by_label = {stake.label: stake for stake in plan.stakes}
+        for label, win, other_loss, own_loss in tiles:
+            stake = by_label[label]
+            # Gross win: cash back if this score lands - identical from every
+            # cell, which is exactly what equal-payout staking buys.
+            assert float(win) == pytest.approx(plan.guaranteed_return, abs=0.01)
+            # This cell's own stake, dead if any other score lands.
+            assert float(own_loss) == pytest.approx(stake.stake, abs=0.01)
+            # "others" + "this" must always reconstruct the whole bankroll.
+            assert float(other_loss) + float(own_loss) == pytest.approx(plan.bankroll, abs=0.02)
+    # Net is win minus bankroll, and the wide grids are underwater even on a hit.
+    assert plans[4].guaranteed_profit < 0
+    assert 'class="sc-net neg">net $-' in section.split("0-4 grid")[1]
+    assert 'class="sc-net pos">net $+' in section.split("0-1 grid")[1]
+
+
+def test_cells_are_shaded_by_probability() -> None:
+    """The likeliest score is the most saturated cell; longshots fade toward white."""
+    section = score_hedge_section(build_forecast(key="argentina_england", live=False))
+    block = section.split("0-4 grid")[1].split("hedge-summary")[0]
+    shaded = [
+        (int(strength), float(probability))
+        for strength, probability in re.findall(
+            r'--strength:(\d+)%" title="\d-\d[^(]*\(probability ([\d.]+)%', block
+        )
+    ]
+    assert len(shaded) == 25
+    # Shading is monotone in probability: ranking by either agrees.
+    by_probability = [item[0] for item in sorted(shaded, key=lambda item: -item[1])]
+    assert by_probability == sorted(by_probability, reverse=True)
+    assert max(by_probability) > 80  # peak score is solidly blue
+    assert min(by_probability) < 15  # rarest score is nearly white
+    assert "sgrid-gradient" in section  # colour legend accompanies the squares

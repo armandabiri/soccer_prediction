@@ -138,13 +138,34 @@ def _grid_from_payload(payload: dict[str, object]) -> ScoreGrid:
 def _quote_from_row(row: object) -> ScoreQuote:
     if not isinstance(row, dict):
         raise ValueError(f"score row must be a mapping, got {type(row).__name__}")
+    price, quoted = _row_price(row)
     return ScoreQuote(
         home_goals=int(row["home"]),
         away_goals=int(row["away"]),
-        price=max(_EPSILON, float(row.get("price", 0.0)) or _EPSILON),
+        price=price,
         probability=max(_EPSILON, float(row.get("probability", 0.0)) or _EPSILON),
-        estimated_price=bool(row.get("estimated", False)),
+        estimated_price=bool(row.get("estimated", False)) or not quoted,
     )
+
+
+def _row_price(row: dict[str, object]) -> tuple[float, bool]:
+    """Resolve a scoreline's price from the market percentage on screen.
+
+    ``displayed`` is the real, observed market number for every score, so it is
+    what the plans price against. (Two payout quotes on this book imply real
+    fills cost ~1.1pp more than the screen; that is a genuine cost, but it was
+    only ever measured on two 1-2% longshots and does not generalize to a 16%
+    line. ``score_optimizer`` can apply it as an explicit sensitivity instead of
+    baking a guess into the headline.) Schema 1 rows still carry flat ``price``.
+
+    The second return value is False only when the displayed number itself was
+    assumed rather than read off a screenshot.
+    """
+    displayed = row.get("displayed")
+    if displayed is not None:
+        return max(_EPSILON, float(displayed)), not bool(row.get("estimated", False))  # type: ignore[arg-type]
+    legacy = float(row.get("price", 0.0) or 0.0)  # type: ignore[arg-type]
+    return max(_EPSILON, legacy or _EPSILON), not bool(row.get("estimated", False))
 
 
 def build_grid_hedge(

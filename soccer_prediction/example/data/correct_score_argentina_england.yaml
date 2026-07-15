@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 source: kalshi_screenshot_manual_entry
 observed_at: "2026-07-14T22:22:00-05:00"
 # Scoreboard read as "ENG 0-0 ARG": England is home, Argentina is away, so every
@@ -7,37 +7,63 @@ fixture:
   home: England
   away: Argentina
   kickoff: "2026-07-15T14:00:00-04:00"
-# Default bankroll the hedge module distributes across a score grid.
-bankroll: 500.0
+bankroll: 100.0
 
-# One row per exact scoreline (0-0 .. 3-3).
-#   price       = market "Yes" price as a decimal (a contract pays 1.00 if that
-#                 exact score occurs); read from the three screenshots.
-#   probability = the model's probability of that exact score (used to weight
-#                 outcomes so we report real expected profit, not just the
-#                 price-implied "guarantee").
-#   estimated   = true  -> the price was NOT visible in the screenshots. All
-#                 sixteen prices are now real market quotes, so this is false
-#                 everywhere; the flag stays supported for future partial grids.
+# ---------------------------------------------------------------------------
+# displayed vs ask
+# ---------------------------------------------------------------------------
+# The percentage the app SHOWS is not the price you PAY. Two payout quotes pin
+# the real ask down:
+#   Argentina 3-0 (0-3): $20 stake -> $645 payout => ask = 20/645  = 3.10%
+#                                                     (displayed 2%,  +1.10pp)
+#   Draw 3-3      (3-3): $100      -> $4,879      => ask = 100/4879 = 2.05%
+#                                                     (displayed 1%,  +1.05pp)
+# Both agree on a ~+1.1pp spread over the displayed number. `displayed` keeps
+# the screenshot value; `ask` is what actually leaves your pocket and is what
+# the optimizer prices against. Where no payout quote exists, ask is estimated
+# as displayed + _ASK_SPREAD (see score_optimizer.ASK_SPREAD) rather than
+# trusting the optimistic displayed figure.
 #
-# NOTE: the 0-0 / 1-0 / 0-1 rows were scrolled off the original screenshots and
-# were briefly modelled at 5.6% / 6.4% / 8.1%. The real market charges 11% for
-# each. That +12.9pp swing pushes the full 0-3 grid's price sum above 1.00, i.e.
-# out of arbitrage entirely -- see the hedge section of the report.
+#   displayed   = market % shown in the app
+#   ask         = real price paid per $1 contract (null => derive from spread)
+#   probability = model probability for that exact score
+#
+# Nothing here is ever zero, and the scores listed do NOT cover the whole
+# outcome space: every unlisted score (4-0, 5-2, ...) is folded into a single
+# untradeable residual outcome by the optimizer, so the tail can never be
+# silently treated as impossible.
 scores:
-  - {home: 0, away: 0, price: 0.110, probability: 0.0557, estimated: false}  # Draw 0-0
-  - {home: 0, away: 1, price: 0.110, probability: 0.0807, estimated: false}  # Argentina 1-0
-  - {home: 0, away: 2, price: 0.060, probability: 0.0678, estimated: false}  # Argentina 2-0
-  - {home: 0, away: 3, price: 0.020, probability: 0.0371, estimated: false}  # Argentina 3-0
-  - {home: 1, away: 0, price: 0.110, probability: 0.0642, estimated: false}  # England 1-0
-  - {home: 1, away: 1, price: 0.160, probability: 0.1095, estimated: false}  # Draw 1-1
-  - {home: 1, away: 2, price: 0.090, probability: 0.0887, estimated: false}  # Argentina 2-1
-  - {home: 1, away: 3, price: 0.030, probability: 0.0498, estimated: false}  # Argentina 3-1
-  - {home: 2, away: 0, price: 0.070, probability: 0.0434, estimated: false}  # England 2-0
-  - {home: 2, away: 1, price: 0.090, probability: 0.0705, estimated: false}  # England 2-1
-  - {home: 2, away: 2, price: 0.060, probability: 0.0592, estimated: false}  # Draw 2-2
-  - {home: 2, away: 3, price: 0.030, probability: 0.0339, estimated: false}  # Argentina 3-2
-  - {home: 3, away: 0, price: 0.020, probability: 0.0194, estimated: false}  # England 3-0
-  - {home: 3, away: 1, price: 0.040, probability: 0.0321, estimated: false}  # England 3-1
-  - {home: 3, away: 2, price: 0.030, probability: 0.0279, estimated: false}  # England 3-2
-  - {home: 3, away: 3, price: 0.020, probability: 0.0163, estimated: false}  # Draw 3-3
+  - {home: 0, away: 0, displayed: 0.11, ask: null, probability: 0.0557}  # Draw 0-0
+  - {home: 0, away: 1, displayed: 0.11, ask: null, probability: 0.0807}  # Argentina 1-0
+  - {home: 0, away: 2, displayed: 0.06, ask: null, probability: 0.0678}  # Argentina 2-0
+  - {home: 0, away: 3, displayed: 0.02, ask: 0.0310, probability: 0.0371}  # Argentina 3-0 (quoted)
+  - {home: 1, away: 0, displayed: 0.11, ask: null, probability: 0.0642}  # England 1-0
+  - {home: 1, away: 1, displayed: 0.16, ask: null, probability: 0.1095}  # Draw 1-1
+  - {home: 1, away: 2, displayed: 0.09, ask: null, probability: 0.0887}  # Argentina 2-1
+  - {home: 1, away: 3, displayed: 0.03, ask: null, probability: 0.0498}  # Argentina 3-1
+  - {home: 2, away: 0, displayed: 0.07, ask: null, probability: 0.0434}  # England 2-0
+  - {home: 2, away: 1, displayed: 0.09, ask: null, probability: 0.0705}  # England 2-1
+  - {home: 2, away: 2, displayed: 0.06, ask: null, probability: 0.0592}  # Draw 2-2
+  - {home: 2, away: 3, displayed: 0.03, ask: null, probability: 0.0339}  # Argentina 3-2
+  - {home: 3, away: 0, displayed: 0.02, ask: null, probability: 0.0194}  # England 3-0
+  - {home: 3, away: 1, displayed: 0.04, ask: null, probability: 0.0321}  # England 3-1
+  - {home: 3, away: 2, displayed: 0.03, ask: null, probability: 0.0279}  # England 3-2
+  - {home: 3, away: 3, displayed: 0.01, ask: 0.0205, probability: 0.0163}  # Draw 3-3 (quoted)
+  # --- 4-goal scores, completing the 0-4 grid -----------------------------
+  # Read off the screenshots (every visible 4-goal score displays 1%):
+  - {home: 4, away: 2, displayed: 0.01, ask: null, probability: 0.0098}  # England 4-2
+  - {home: 2, away: 4, displayed: 0.01, ask: null, probability: 0.0149}  # Argentina 4-2
+  - {home: 1, away: 4, displayed: 0.01, ask: null, probability: 0.0219}  # Argentina 4-1
+  # Not visible in any screenshot. Every 4-goal score we CAN see displays 1%,
+  # so 1% is assumed here; `estimated: true` marks them in the report. Send the
+  # real percentages to firm these up.
+  - {home: 4, away: 0, displayed: 0.01, ask: null, probability: 0.0069, estimated: true}  # England 4-0
+  - {home: 4, away: 1, displayed: 0.01, ask: null, probability: 0.0111, estimated: true}  # England 4-1
+  - {home: 4, away: 3, displayed: 0.01, ask: null, probability: 0.0057, estimated: true}  # England 4-3
+  - {home: 4, away: 4, displayed: 0.01, ask: null, probability: 0.0026, estimated: true}  # Draw 4-4
+  - {home: 0, away: 4, displayed: 0.01, ask: null, probability: 0.0161, estimated: true}  # Argentina 4-0
+  - {home: 3, away: 4, displayed: 0.01, ask: null, probability: 0.0070, estimated: true}  # Argentina 4-3
+# The 25 scores above are the full 0-4 grid and carry ~95.2% of the model's
+# probability mass. The remaining ~4.8% (every score with a 5+, e.g. 5-1) becomes
+# the untradeable residual outcome - the reason no allocation can ever cover
+# 100% of the outcome space, and why the widest grids still lose the bankroll.

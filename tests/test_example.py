@@ -25,6 +25,7 @@ def test_fixtures_registry_has_expected_matchups() -> None:
         "argentina_egypt",
         "spain_belgium",
         "spain_france",
+        "argentina_england",
     } <= set(FIXTURES)
     for key, spec in FIXTURES.items():
         assert spec.key == key
@@ -79,15 +80,18 @@ def test_switzerland_colombia_forecast_favours_stronger_side() -> None:
 
 
 def test_other_fixtures_load_independently() -> None:
-    """France/Morocco, Argentina/Egypt, Spain/Belgium, Spain/France load their own data."""
+    """France/Morocco, Argentina/Egypt, Spain/Belgium, Spain/France, Argentina/England load their own data."""
     france_morocco = load_history(key="france_morocco")
     argentina_egypt = load_history(key="argentina_egypt")
     spain_belgium = load_history(key="spain_belgium")
     spain_france = load_history(key="spain_france")
+    argentina_england = load_history(key="argentina_england")
     assert {"France", "Morocco"} <= {record.team for record in france_morocco}
     assert {"Argentina", "Egypt"} <= {record.team for record in argentina_egypt}
     assert {"Spain", "Belgium"} <= {record.team for record in spain_belgium}
     assert {"Spain", "France"} <= {record.team for record in spain_france}
-    assert {"Switzerland", "Colombia"}.isdisjoint({record.team for record in france_morocco})
-    assert {"Switzerland", "Colombia"}.isdisjoint({record.team for record in spain_belgium})
-    assert {"Switzerland", "Colombia"}.isdisjoint({record.team for record in spain_france})
+    assert {"Argentina", "England"} <= {record.team for record in argentina_england}
+    # Opponents may overlap across fixtures via the network pack; primary pairs must not.
+    assert "England" not in {record.team for record in argentina_egypt}
+    assert "Belgium" not in {record.team for record in spain_france}
+    assert "Morocco" not in {record.team for record in spain_belgium}

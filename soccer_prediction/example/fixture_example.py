@@ -4,7 +4,7 @@
 entry owns its own bundled offline sample (history + squad) and its own
 registered data-source names, so adding a fixture never collides with another
 one's registration. By default every function operates on ``DEFAULT_FIXTURE``
-(Spain vs France), matching ``DEFAULT_FIXTURE``. Compatibility exports from
+(Argentina vs England). Compatibility exports from
 ``soccer_prediction.example`` remain pinned to Switzerland vs Colombia.
 
 By default (``live=True``) each fixture uses **all real international results
@@ -149,9 +149,19 @@ FIXTURES: dict[str, FixtureSpec] = {
         live_source="esp_fra_2024",
         title="Spain vs France - Match Forecast (2024 to date)",
     ),
+    "argentina_england": FixtureSpec(
+        key="argentina_england",
+        home="Argentina",
+        away="England",
+        history_file="data/argentina_england_history.json",
+        players_file="data/argentina_england_players.json",
+        bundled_source="bundled_arg_eng",
+        live_source="arg_eng_2024",
+        title="Argentina vs England - Match Forecast (2024 to date)",
+    ),
 }
 
-DEFAULT_FIXTURE = "spain_france"
+DEFAULT_FIXTURE = "argentina_england"
 
 
 class FixtureDataSource:

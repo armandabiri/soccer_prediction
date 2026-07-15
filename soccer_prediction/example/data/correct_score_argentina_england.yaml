@@ -1,0 +1,43 @@
+schema_version: 1
+source: kalshi_screenshot_manual_entry
+observed_at: "2026-07-14T22:22:00-05:00"
+# Scoreboard read as "ENG 0-0 ARG": England is home, Argentina is away, so every
+# "home-away" score below is England goals - Argentina goals.
+fixture:
+  home: England
+  away: Argentina
+  kickoff: "2026-07-15T14:00:00-04:00"
+# Default bankroll the hedge module distributes across a score grid.
+bankroll: 500.0
+
+# One row per exact scoreline (0-0 .. 3-3).
+#   price       = market "Yes" price as a decimal (a contract pays 1.00 if that
+#                 exact score occurs); read from the three screenshots.
+#   probability = the model's probability of that exact score (used to weight
+#                 outcomes so we report real expected profit, not just the
+#                 price-implied "guarantee").
+#   estimated   = true  -> the price was NOT visible in the screenshots. All
+#                 sixteen prices are now real market quotes, so this is false
+#                 everywhere; the flag stays supported for future partial grids.
+#
+# NOTE: the 0-0 / 1-0 / 0-1 rows were scrolled off the original screenshots and
+# were briefly modelled at 5.6% / 6.4% / 8.1%. The real market charges 11% for
+# each. That +12.9pp swing pushes the full 0-3 grid's price sum above 1.00, i.e.
+# out of arbitrage entirely -- see the hedge section of the report.
+scores:
+  - {home: 0, away: 0, price: 0.110, probability: 0.0557, estimated: false}  # Draw 0-0
+  - {home: 0, away: 1, price: 0.110, probability: 0.0807, estimated: false}  # Argentina 1-0
+  - {home: 0, away: 2, price: 0.060, probability: 0.0678, estimated: false}  # Argentina 2-0
+  - {home: 0, away: 3, price: 0.020, probability: 0.0371, estimated: false}  # Argentina 3-0
+  - {home: 1, away: 0, price: 0.110, probability: 0.0642, estimated: false}  # England 1-0
+  - {home: 1, away: 1, price: 0.160, probability: 0.1095, estimated: false}  # Draw 1-1
+  - {home: 1, away: 2, price: 0.090, probability: 0.0887, estimated: false}  # Argentina 2-1
+  - {home: 1, away: 3, price: 0.030, probability: 0.0498, estimated: false}  # Argentina 3-1
+  - {home: 2, away: 0, price: 0.070, probability: 0.0434, estimated: false}  # England 2-0
+  - {home: 2, away: 1, price: 0.090, probability: 0.0705, estimated: false}  # England 2-1
+  - {home: 2, away: 2, price: 0.060, probability: 0.0592, estimated: false}  # Draw 2-2
+  - {home: 2, away: 3, price: 0.030, probability: 0.0339, estimated: false}  # Argentina 3-2
+  - {home: 3, away: 0, price: 0.020, probability: 0.0194, estimated: false}  # England 3-0
+  - {home: 3, away: 1, price: 0.040, probability: 0.0321, estimated: false}  # England 3-1
+  - {home: 3, away: 2, price: 0.030, probability: 0.0279, estimated: false}  # England 3-2
+  - {home: 3, away: 3, price: 0.020, probability: 0.0163, estimated: false}  # Draw 3-3

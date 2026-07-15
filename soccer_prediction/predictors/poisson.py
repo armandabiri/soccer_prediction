@@ -64,6 +64,9 @@ def expected_goals(
     home_lambda, away_lambda = _blend_head_to_head(
         rates, home, away, home_lambda, away_lambda, neutral_venue=neutral_venue
     )
+    home_lambda, away_lambda = _blend_shared_opponents(
+        rates, home, away, home_lambda, away_lambda, neutral_venue=neutral_venue
+    )
     morale_edge = min(1.0, max(-1.0, (rates.morale_for(home) - rates.morale_for(away)) / 2.0))
     morale_effect = min(0.15, max(0.0, model.morale_max_effect))
     home_lambda *= 1.0 + morale_effect * morale_edge
@@ -145,6 +148,56 @@ def _blend_head_to_head(
     return (
         home_lambda * (1.0 - weight) + direct_home * weight,
         away_lambda * (1.0 - weight) + direct_away * weight,
+    )
+
+
+# Evidence pivot: effective chain weight at which the shared-opponent blend is
+# half of its evidence-driven maximum. Confidence pivot: the connection weight
+# at which two well-connected sides trust the network fit over the transitive
+# hint (the signal is meant to help thinly-connected teams the most).
+_SHARED_EVIDENCE_PIVOT = 1.0
+_SHARED_CONFIDENCE_PIVOT = 8.0
+
+
+def _blend_shared_opponents(
+    rates: RateBook,
+    home: str,
+    away: str,
+    home_lambda: float,
+    away_lambda: float,
+    *,
+    neutral_venue: bool,
+) -> tuple[float, float]:
+    """Nudge goal expectations toward a transitive common-opponent estimate.
+
+    Uses ``home`` and ``away``'s shared/indirect opponents to imply a scoreline,
+    then blends it in with a weight that grows with chain evidence and shrinks as
+    the two teams become densely connected (where the network fit already
+    captures their strength). Off when ``shared_opponent_weight`` is zero.
+    """
+    model = load_config().model
+    max_weight = model.shared_opponent_weight
+    if max_weight <= 0.0:
+        return home_lambda, away_lambda
+    signal = rates.shared_opponent_signal(
+        home,
+        away,
+        max_hops=model.shared_opponent_max_hops,
+        hop_decay=model.shared_opponent_hop_decay,
+    )
+    if signal is None:
+        return home_lambda, away_lambda
+    implied_home, implied_away, evidence = signal
+    if not neutral_venue:
+        implied_home *= 1.08
+        implied_away *= 0.92
+    evidence_factor = evidence / (evidence + _SHARED_EVIDENCE_PIVOT)
+    connection = min(rates.confidence_for(home), rates.confidence_for(away))
+    thin_factor = _SHARED_CONFIDENCE_PIVOT / (_SHARED_CONFIDENCE_PIVOT + connection)
+    weight = min(max_weight, max_weight * evidence_factor * thin_factor)
+    return (
+        home_lambda * (1.0 - weight) + implied_home * weight,
+        away_lambda * (1.0 - weight) + implied_away * weight,
     )
 
 

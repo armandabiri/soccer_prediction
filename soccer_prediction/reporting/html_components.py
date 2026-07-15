@@ -145,6 +145,13 @@ td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
   .market-head,.market-row { grid-template-columns:105px minmax(90px,1fr) 32px minmax(90px,1fr) 32px; }
   .heatmap { grid-template-columns:38px repeat(6,minmax(43px,1fr)); overflow-x:auto; } }
 .foot { color:var(--muted); font-size:.82rem; margin-top:24px; }
+.pos { color:#1a7f37; font-weight:600; }
+.neg { color:#c0362c; font-weight:600; }
+.hedge-summary { display:flex; flex-wrap:wrap; gap:10px 18px; margin:12px 0 22px; }
+.hedge-stat { display:flex; flex-direction:column; min-width:118px; padding:8px 12px; background:var(--bar);
+  border-radius:10px; }
+.hedge-stat-k { color:var(--muted); font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; }
+.hedge-stat-v { font-size:1.02rem; font-weight:600; margin-top:2px; }
 .pill { display:inline-block; background:var(--bar); border-radius:999px; padding:2px 10px; font-size:.8rem; }
 .dot { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:7px;
   vertical-align:middle; border:1px solid rgba(128,128,128,.35); }

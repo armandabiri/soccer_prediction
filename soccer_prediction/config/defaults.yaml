@@ -27,3 +27,16 @@ model:
   elite_defence_exponent: 0.85
   # Small total-goals scale for strong-vs-strong meetings (0 = off).
   elite_tempo_strength: 0.08
+  # Attack/defence rating estimator: "mle" (regularized Poisson maximum
+  # likelihood, propagated across the opponent graph) or "heuristic" (legacy).
+  network_rating_method: "mle"
+  # Distrust thinly-connected teams: shrink their network attack/defence toward
+  # 1.0 by effective match weight (0 = never shrink, higher = more caution).
+  network_confidence_prior: 2.0
+  # Blend a transitive shared-opponent margin (A beat X, X beat B => A favored)
+  # into goal expectations; max weight, fades in for thin/indirect data (0 = off).
+  shared_opponent_weight: 0.15
+  # Discount per extra hop so long/weak connection chains count for less.
+  shared_opponent_hop_decay: 0.5
+  # Longest connection chain (edges) searched between the two teams.
+  shared_opponent_max_hops: 3

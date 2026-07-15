@@ -20,6 +20,7 @@ from soccer_prediction.reporting.html_components import (
 from soccer_prediction.reporting.html_confident_bets import confident_bets_section
 from soccer_prediction.reporting.html_context import context_section
 from soccer_prediction.reporting.html_model_comparison import ensemble_heatmap_section, model_comparison_section
+from soccer_prediction.reporting.html_score_hedge import score_hedge_section
 from soccer_prediction.reporting.html_strategy import strategy_section
 
 __all__ = ["render_html", "example_usage", "main"]
@@ -53,6 +54,7 @@ def render_html(
         _goals_section(forecast),
         _score_section(forecast.correct_score),
         confident_bets_section(forecast),
+        score_hedge_section(forecast),
         strategy_section(strategy),
         _half_section(forecast, home, away),
         _corners_section(forecast, home, away),

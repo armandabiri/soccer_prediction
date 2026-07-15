@@ -54,6 +54,19 @@ class ModelConfig:
     rate_prior_weight: float = 4.0
     elite_defence_exponent: float = 0.85
     elite_tempo_strength: float = 0.08
+    # Attack/defence rating estimator: "mle" (regularized Poisson maximum
+    # likelihood) or "heuristic" (the legacy per-match-ratio fixed point).
+    network_rating_method: str = "mle"
+    # Shrink each team's network attack/defence factor toward neutral (1.0) by
+    # its effective match weight; higher values distrust thinly-connected teams.
+    network_confidence_prior: float = 2.0
+    # Max blend weight of the shared-opponent (transitive) margin into goal
+    # expectations; scales with connection evidence, fades out for rich data.
+    shared_opponent_weight: float = 0.15
+    # Per-extra-hop discount applied to indirect connection chains (0..1).
+    shared_opponent_hop_decay: float = 0.5
+    # Longest connection chain (edges) searched between the two teams.
+    shared_opponent_max_hops: int = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,6 +125,11 @@ def _apply_env(config: dict[str, Any]) -> dict[str, Any]:
         ("model", "rate_prior_weight"): os.getenv("SOCCER_PREDICTION_MODEL_RATE_PRIOR_WEIGHT"),
         ("model", "elite_defence_exponent"): os.getenv("SOCCER_PREDICTION_MODEL_ELITE_DEFENCE_EXPONENT"),
         ("model", "elite_tempo_strength"): os.getenv("SOCCER_PREDICTION_MODEL_ELITE_TEMPO_STRENGTH"),
+        ("model", "network_rating_method"): os.getenv("SOCCER_PREDICTION_MODEL_NETWORK_RATING_METHOD"),
+        ("model", "network_confidence_prior"): os.getenv("SOCCER_PREDICTION_MODEL_NETWORK_CONFIDENCE_PRIOR"),
+        ("model", "shared_opponent_weight"): os.getenv("SOCCER_PREDICTION_MODEL_SHARED_OPPONENT_WEIGHT"),
+        ("model", "shared_opponent_hop_decay"): os.getenv("SOCCER_PREDICTION_MODEL_SHARED_OPPONENT_HOP_DECAY"),
+        ("model", "shared_opponent_max_hops"): os.getenv("SOCCER_PREDICTION_MODEL_SHARED_OPPONENT_MAX_HOPS"),
         ("rate_limits", "api_football"): os.getenv("SOCCER_PREDICTION_RATE_LIMITS_API_FOOTBALL"),
     }
     updated = dict(config)
@@ -129,6 +147,7 @@ def _apply_env(config: dict[str, Any]) -> dict[str, Any]:
             "random_seed",
             "opponent_network_depth",
             "opponent_network_max_teams",
+            "shared_opponent_max_hops",
             "api_football",
         }:
             section_data[key] = int(raw_value)
@@ -139,6 +158,9 @@ def _apply_env(config: dict[str, Any]) -> dict[str, Any]:
             "rate_prior_weight",
             "elite_defence_exponent",
             "elite_tempo_strength",
+            "network_confidence_prior",
+            "shared_opponent_weight",
+            "shared_opponent_hop_decay",
         }:
             section_data[key] = float(raw_value)
         else:
@@ -182,8 +204,19 @@ def load_config(path: str | Path | None = None) -> AppConfig:
             rate_prior_weight=float(model_data.get("rate_prior_weight", 4.0)),
             elite_defence_exponent=min(1.0, max(0.35, float(model_data.get("elite_defence_exponent", 0.85)))),
             elite_tempo_strength=min(1.0, max(0.0, float(model_data.get("elite_tempo_strength", 0.08)))),
+            network_rating_method=_rating_method(model_data.get("network_rating_method", "mle")),
+            network_confidence_prior=max(0.0, float(model_data.get("network_confidence_prior", 2.0))),
+            shared_opponent_weight=min(0.6, max(0.0, float(model_data.get("shared_opponent_weight", 0.15)))),
+            shared_opponent_hop_decay=min(1.0, max(0.0, float(model_data.get("shared_opponent_hop_decay", 0.5)))),
+            shared_opponent_max_hops=min(6, max(2, int(model_data.get("shared_opponent_max_hops", 3)))),
         ),
     )
+
+
+def _rating_method(value: Any) -> str:
+    """Normalize the network rating selector to a supported estimator name."""
+    method = str(value).strip().casefold()
+    return method if method in {"mle", "heuristic"} else "mle"
 
 
 def example_usage() -> None:

@@ -9,8 +9,9 @@
     "workbench.editor.pinnedTabsOnSeparateRow": true,
     "workbench.editor.showTabs": "multiple",
     "editor.tabFocusMode": false,
-    "editor.rulers": [120],
-
+    "editor.rulers": [
+        120
+    ],
     // Files & Explorer
     "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 1000,
@@ -22,7 +23,6 @@
     },
     "explorer.copyPathSeparator": "/",
     "explorer.copyRelativePathSeparator": "/",
-
     // Python Configuration
     "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
     "python.terminal.activateEnvironment": true,
@@ -35,7 +35,6 @@
     "python.analysis.useLibraryCodeForTypes": true,
     "python.analysis.inlayHints.functionReturnTypes": true,
     "python.analysis.inlayHints.variableTypes": true,
-
     // Linting & Formatting
     "python.linting.enabled": true,
     "python.linting.ruffEnabled": true,
@@ -58,16 +57,14 @@
             "source.fixAll.ruff": "explicit"
         }
     },
-
     // Testing
     "python.testing.pytestEnabled": true,
     "python.testing.pytestArgs": [
-        "-c", "${workspaceFolder}/.intelag/python/pyproject.toml"
+        "-c",
+        "${workspaceFolder}/.intelag/python/pyproject.toml"
     ],
-
     // Terminal
     "terminal.integrated.scrollback": 50000,
-
     // Dart & Flutter Configuration
     "dart.analysisServerFolding": false,
     "dart.showTodos": false,
@@ -78,7 +75,6 @@
         ".dart_tool",
         ".pub-cache"
     ],
-
     // CSpell
     "cSpell.words": [
         "intelag",
@@ -87,5 +83,6 @@
         "pytest",
         "venv",
         "Impeller"
-    ]
+    ],
+    "intelag.websiteViewer.entryPoint": "d:\\INTELAG\\repo\\intelag_website\\intelag-website\\index.html"
 }

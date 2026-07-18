@@ -80,17 +80,21 @@ def test_switzerland_colombia_forecast_favours_stronger_side() -> None:
 
 
 def test_other_fixtures_load_independently() -> None:
-    """France/Morocco, Argentina/Egypt, Spain/Belgium, Spain/France, Argentina/England load their own data."""
+    """France/Morocco, Argentina/Egypt, Spain/Belgium, Spain/France, Argentina/England,
+    France/England load their own data.
+    """
     france_morocco = load_history(key="france_morocco")
     argentina_egypt = load_history(key="argentina_egypt")
     spain_belgium = load_history(key="spain_belgium")
     spain_france = load_history(key="spain_france")
     argentina_england = load_history(key="argentina_england")
+    france_england = load_history(key="france_england")
     assert {"France", "Morocco"} <= {record.team for record in france_morocco}
     assert {"Argentina", "Egypt"} <= {record.team for record in argentina_egypt}
     assert {"Spain", "Belgium"} <= {record.team for record in spain_belgium}
     assert {"Spain", "France"} <= {record.team for record in spain_france}
     assert {"Argentina", "England"} <= {record.team for record in argentina_england}
+    assert {"France", "England"} <= {record.team for record in france_england}
     # Primary pairs stay distinct even when opponent-network packs overlap.
     assert "England" not in {record.team for record in argentina_egypt}
     assert "Morocco" not in {record.team for record in spain_belgium}

@@ -1,0 +1,40 @@
+schema_version: 2
+source: kalshi_screenshot_manual_entry
+observed_at: "2026-07-18T12:45:00-05:00"
+# Scoreboard read as "FRA 0-0 ENG": France is home, England is away, so every
+# "home-away" score below is France goals - England goals.
+fixture:
+  home: France
+  away: England
+  kickoff: "2026-07-18T16:00:00-04:00"
+bankroll: 100.0
+
+#   displayed   = market % shown in the app
+#   ask         = real price paid per $1 contract (null => derive from spread)
+#   probability = model probability for that exact score
+scores:
+  - {home: 0, away: 0, displayed: 0.03, ask: null, probability: 0.053382, estimated: true}  # Draw 0-0
+  - {home: 0, away: 1, displayed: 0.10, ask: null, probability: 0.068380, estimated: true}  # England 1-0
+  - {home: 0, away: 2, displayed: 0.03, ask: null, probability: 0.049155}  # England 2-0
+  - {home: 0, away: 3, displayed: 0.02, ask: null, probability: 0.023235}  # England 3-0
+  - {home: 0, away: 4, displayed: 0.01, ask: null, probability: 0.008837}  # England 4-0
+  - {home: 1, away: 0, displayed: 0.11, ask: null, probability: 0.075221, estimated: true}  # France 1-0
+  - {home: 1, away: 1, displayed: 0.16, ask: null, probability: 0.107899, estimated: true}  # Draw 1-1
+  - {home: 1, away: 2, displayed: 0.07, ask: null, probability: 0.075792}  # England 2-1
+  - {home: 1, away: 3, displayed: 0.04, ask: null, probability: 0.037253}  # England 3-1
+  - {home: 1, away: 4, displayed: 0.01, ask: null, probability: 0.014476}  # England 4-1
+  - {home: 2, away: 0, displayed: 0.07, ask: null, probability: 0.060210}  # France 2-0
+  - {home: 2, away: 1, displayed: 0.12, ask: null, probability: 0.084710}  # France 2-1
+  - {home: 2, away: 2, displayed: 0.06, ask: null, probability: 0.061738, estimated: true}  # Draw 2-2
+  - {home: 2, away: 3, displayed: 0.04, ask: null, probability: 0.030070}  # England 3-2
+  - {home: 2, away: 4, displayed: 0.01, ask: null, probability: 0.011424, estimated: true}  # England 4-2
+  - {home: 3, away: 0, displayed: 0.05, ask: null, probability: 0.032082}  # France 3-0
+  - {home: 3, away: 1, displayed: 0.08, ask: null, probability: 0.045388}  # France 3-1
+  - {home: 3, away: 2, displayed: 0.06, ask: null, probability: 0.033561}  # France 3-2
+  - {home: 3, away: 3, displayed: 0.02, ask: null, probability: 0.016899, estimated: true}  # Draw 3-3
+  - {home: 3, away: 4, displayed: 0.01, ask: null, probability: 0.006326}  # England 4-3
+  - {home: 4, away: 0, displayed: 0.02, ask: null, probability: 0.012879}  # France 4-0
+  - {home: 4, away: 1, displayed: 0.03, ask: null, probability: 0.018975, estimated: true}  # France 4-1
+  - {home: 4, away: 2, displayed: 0.04, ask: null, probability: 0.014222}  # France 4-2
+  - {home: 4, away: 3, displayed: 0.01, ask: null, probability: 0.007345}  # France 4-3
+  - {home: 4, away: 4, displayed: 0.01, ask: null, probability: 0.002969}  # Draw 4-4
